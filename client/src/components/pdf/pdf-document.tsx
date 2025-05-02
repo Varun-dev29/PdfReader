@@ -185,6 +185,7 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
     if (selectedText) {
       speak(selectedText, { rate: speechRate });
     } else {
+      // Main function that reads the current page and then moves to the next page
       const readCurrentPage = () => {
         const wordsWithContext = getPageWordsWithContext();
         
@@ -192,40 +193,50 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
           let currentIndex = 0;
           
           const speakNextWord = () => {
+            // If there are more words on this page and we haven't paused
             if (currentIndex < wordsWithContext.length && !window.speechSynthesis.paused) {
               const { word, cleanWord } = wordsWithContext[currentIndex];
               
               // First highlight the word, then speak it
               const highlightSuccess = highlightTextInPdf(cleanWord, true);
               
+              // Note: Only continue to the next word after the current one finishes speaking
               speak(word, { 
                 rate: speechRate,
                 onEnd: () => {
+                  // Small delay to make reading feel more natural
                   setTimeout(() => {
+                    // Move to the next word
                     currentIndex++;
                     
-                    // Continue to next word only if we're still playing
+                    // If we're still actively playing (not manually stopped)
                     if (!window.speechSynthesis.paused) {
                       speakNextWord();
                     }
-                  }, 50); // Smaller delay between words for more natural reading
+                  }, 20); // Very small delay between words for more natural reading
                 }
               });
-            } else if (currentIndex >= wordsWithContext.length) {
+            } 
+            // If we've reached the end of the words on this page
+            else if (currentIndex >= wordsWithContext.length) {
               // Check if there's a next page available
               if (pageNumber < (numPages || 1)) {
-                // Move to the next page and continue reading
+                // We use a timeout to allow a brief pause between pages
                 setTimeout(() => {
+                  // Only proceed if we're still actively playing
                   if (!window.speechSynthesis.paused) {
+                    // Navigate to the next page
                     goToNextPage();
-                    // After a brief pause to allow page to load, continue reading
+                    
+                    // Wait a moment for the page to fully load before reading
                     setTimeout(() => {
                       if (!window.speechSynthesis.paused) {
+                        // Recursively call readCurrentPage to read the next page
                         readCurrentPage();
                       }
-                    }, 500);
+                    }, 500); // Half-second delay to ensure the page is loaded
                   }
-                }, 300);
+                }, 200); // Brief pause between pages
               } else {
                 // We've reached the end of the document
                 toast({
@@ -236,17 +247,31 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
             }
           };
         
+          // Start the reading process on this page
           speakNextWord();
         } else {
-          toast({
-            title: "No text found",
-            description: "Could not extract text from the current page.",
-            variant: "destructive",
-          });
+          // If no text could be extracted, try moving to the next page
+          if (pageNumber < (numPages || 1)) {
+            goToNextPage();
+            
+            // Wait for the next page to load
+            setTimeout(() => {
+              if (!window.speechSynthesis.paused) {
+                readCurrentPage(); // Try reading the next page
+              }
+            }, 500);
+          } else {
+            // If we can't find text on the last page
+            toast({
+              title: "No text found",
+              description: "Could not extract text from the document.",
+              variant: "destructive",
+            });
+          }
         }
       };
       
-      // Start reading the current page
+      // Start the reading process
       readCurrentPage();
     }
   };

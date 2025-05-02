@@ -273,18 +273,52 @@ export const speechRecognition = {
     
     // @ts-ignore
     const recognition = new webkitSpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.continuous = true; // Allow for continuous recognition (longer phrases)
+    recognition.interimResults = true; // Get interim results for better responsiveness
     recognition.lang = 'en-US';
     
+    // For collecting the full sentence
+    let finalTranscript = '';
+    
     recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      onResult(transcript);
+      let interimTranscript = '';
+      
+      // Collect results
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
+        }
+      }
+      
+      // If we have a final result or a long enough interim result, use it
+      if (finalTranscript || interimTranscript.length > 10) {
+        // Prefer final transcript, fall back to interim if needed
+        const result = finalTranscript || interimTranscript;
+        onResult(result);
+        
+        // Reset after processing
+        if (finalTranscript) {
+          finalTranscript = '';
+          
+          // Stop after getting a complete sentence
+          recognition.stop();
+        }
+      }
     };
     
     if (onEnd) {
       recognition.onend = onEnd;
     }
+    
+    // Handle errors
+    recognition.onerror = (event: any) => {
+      console.error('Speech recognition error', event.error);
+      if (onEnd) {
+        onEnd();
+      }
+    };
     
     recognition.start();
     return recognition;
