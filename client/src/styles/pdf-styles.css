@@ -1,7 +1,23 @@
 /* PDF.js text layer styles */
+.react-pdf__Document {
+  line-height: 1;
+}
+
+.react-pdf__Page {
+  position: relative;
+}
+
 .react-pdf__Page__textContent {
-  border: 1px solid transparent;
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
   opacity: 0.2;
+  line-height: 1;
+  text-align: initial;
+  pointer-events: none;
   user-select: text;
 }
 
@@ -9,6 +25,8 @@
   position: absolute;
   color: transparent;
   line-height: 1;
+  transform-origin: 0% 0%;
+  white-space: pre;
 }
 
 .react-pdf__Page__textContent ::selection {
@@ -20,9 +38,10 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
 
 .react-pdf__Page__annotations .annotationLayer {
@@ -31,12 +50,19 @@
   left: 0;
   width: 100%;
   height: 100%;
+  pointer-events: none;
+}
+
+.react-pdf__Page__annotations .annotationLayer section {
+  position: absolute;
+  pointer-events: auto;
 }
 
 .react-pdf__Page__annotations .linkAnnotation {
   position: absolute;
   cursor: pointer;
   outline: none;
+  pointer-events: auto;
 }
 
 .react-pdf__Page__annotations .linkAnnotation:hover {
@@ -46,8 +72,18 @@
 /* Highlight style for search */
 .search-highlight {
   background-color: #ffeb3b;
-  border-radius: 2px;
+  border-radius: 3px;
   padding: 0 2px;
+  color: black !important;
+  font-weight: bold;
+  box-shadow: 0 0 4px rgba(255, 235, 59, 0.7);
+  animation: highlight-pulse 1s ease-in-out infinite;
+}
+
+@keyframes highlight-pulse {
+  0% { background-color: #ffeb3b; box-shadow: 0 0 4px rgba(255, 235, 59, 0.7); }
+  50% { background-color: #ffd740; box-shadow: 0 0 8px rgba(255, 215, 64, 0.9); }
+  100% { background-color: #ffeb3b; box-shadow: 0 0 4px rgba(255, 235, 59, 0.7); }
 }
 
 /* Mobile optimizations */

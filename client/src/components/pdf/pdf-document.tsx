@@ -83,17 +83,87 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
     const textLayer = containerRef.current.querySelector('.react-pdf__Page__textContent');
     if (!textLayer) return '';
     
-    const textSpans = textLayer.querySelectorAll('span');
+    // Get all span elements and sort them by position (top to bottom, left to right)
+    const textSpans = Array.from(textLayer.querySelectorAll('span')).sort((a, b) => {
+      const aTop = parseInt(a.style.top);
+      const bTop = parseInt(b.style.top);
+      const aLeft = parseInt(a.style.left);
+      const bLeft = parseInt(b.style.left);
+      
+      // If they're roughly on the same line (within 15px), sort by left position
+      if (Math.abs(aTop - bTop) < 15) {
+        return aLeft - bLeft;
+      }
+      
+      // Otherwise sort by top position
+      return aTop - bTop;
+    });
+    
     let extractedText = '';
+    let lastTop = -1;
     
     textSpans.forEach(span => {
       const text = span.textContent || '';
       if (text.trim()) {
-        extractedText += text + ' ';
+        const currentTop = parseInt(span.style.top);
+        
+        // If we've moved to a new line, add a space or newline
+        if (lastTop !== -1 && Math.abs(currentTop - lastTop) > 15) {
+          extractedText += '\n';
+        } else if (extractedText && !extractedText.endsWith(' ') && !extractedText.endsWith('\n')) {
+          extractedText += ' ';
+        }
+        
+        extractedText += text;
+        lastTop = currentTop;
       }
     });
     
     return extractedText.trim();
+  };
+  
+  // Define an interface for word context
+  interface WordWithContext {
+    word: string;
+    cleanWord: string;
+    context: string;
+  }
+  
+  // Get all words from the page text with context (sentence or paragraph)
+  const getPageWordsWithContext = (): WordWithContext[] => {
+    const allText = extractAllTextFromPage();
+    if (!allText) return [];
+    
+    // Split text into words while preserving their context
+    // Each item contains the word and the sentence/paragraph it belongs to
+    const wordsWithContext: WordWithContext[] = [];
+    
+    // Split by sentences or paragraphs
+    const paragraphs = allText.split(/\n+/);
+    
+    paragraphs.forEach(paragraph => {
+      // Split paragraph into sentences
+      const sentences = paragraph.split(/(?<=[.!?])\s+/);
+      
+      sentences.forEach(sentence => {
+        // Split sentence into words
+        const words = sentence.split(/\s+/).filter(w => w.trim());
+        
+        words.forEach(word => {
+          // Clean the word of punctuation for highlighting, but keep original for reading
+          const cleanWord = word.replace(/[^\w\s]|_/g, '').trim();
+          if (cleanWord) {
+            wordsWithContext.push({
+              word: word, // Original word with punctuation
+              cleanWord: cleanWord, // Word without punctuation for highlighting
+              context: sentence // Full sentence for context
+            });
+          }
+        });
+      });
+    });
+    
+    return wordsWithContext;
   };
   
   // Handle text-to-speech for selected or all text
@@ -108,26 +178,32 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
     if (selectedText) {
       speak(selectedText, { rate: speechRate });
     } else {
-      const allText = extractAllTextFromPage();
-      if (allText) {
-        // Split by words to show highlighting for each word as they're spoken
-        const words = allText.split(/\s+/);
+      const wordsWithContext = getPageWordsWithContext();
+      
+      if (wordsWithContext.length > 0) {
         let currentIndex = 0;
         
         const speakNextWord = () => {
-          if (currentIndex < words.length) {
-            const word = words[currentIndex];
-            highlightTextInPdf(word);
+          if (currentIndex < wordsWithContext.length && !window.speechSynthesis.paused) {
+            const { word, cleanWord } = wordsWithContext[currentIndex];
+            
+            // First highlight the word, then speak it
+            const highlightSuccess = highlightTextInPdf(cleanWord, true);
+            
             speak(word, { 
               rate: speechRate,
               onEnd: () => {
                 setTimeout(() => {
                   currentIndex++;
-                  speakNextWord();
-                }, 100); // Small delay between words
+                  
+                  // Continue to next word only if we're still playing
+                  if (!window.speechSynthesis.paused) {
+                    speakNextWord();
+                  }
+                }, 50); // Smaller delay between words for more natural reading
               }
             });
-          } else {
+          } else if (currentIndex >= wordsWithContext.length) {
             toast({
               title: "Finished reading",
               description: "Completed reading the current page",
@@ -171,8 +247,8 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
   };
   
   // Function to highlight text in PDF
-  const highlightTextInPdf = (searchText: string) => {
-    if (!searchText.trim() || !containerRef.current) return;
+  const highlightTextInPdf = (searchText: string, isSpeechReading = false) => {
+    if (!searchText.trim() || !containerRef.current) return false;
     
     // Clear previous highlights
     const previousHighlights = containerRef.current.querySelectorAll('.search-highlight');
@@ -187,48 +263,89 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
     
     // Find text in the text layer
     const textLayer = containerRef.current.querySelector('.react-pdf__Page__textContent');
-    if (!textLayer) return;
+    if (!textLayer) return false;
     
     const spans = textLayer.querySelectorAll('span');
     const searchTermLower = searchText.toLowerCase();
     
     let matchFound = false;
     
-    spans.forEach(span => {
-      const text = span.textContent || '';
-      if (text.toLowerCase().includes(searchTermLower)) {
-        matchFound = true;
+    // For exact word matching during speech reading
+    if (isSpeechReading) {
+      // Search for exact word matches (words should match whole or be surrounded by spaces/punctuation)
+      spans.forEach(span => {
+        const text = span.textContent || '';
         
-        // Replace text with highlighted version
-        const parts = text.split(new RegExp(`(${searchText})`, 'i'));
-        span.textContent = '';
+        // Check if the span contains the exact word (with word boundaries)
+        const wordRegex = new RegExp(`\\b${searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
         
-        parts.forEach(part => {
-          if (part.toLowerCase() === searchTermLower) {
-            const highlight = document.createElement('span');
-            highlight.textContent = part;
-            highlight.className = 'search-highlight';
-            span.appendChild(highlight);
-          } else if (part) {
-            span.appendChild(document.createTextNode(part));
-          }
-        });
-      }
-    });
-    
-    if (matchFound) {
-      setHighlightedMatches(prev => [...prev, searchText]);
-      toast({
-        title: "Match found",
-        description: `Highlighted "${searchText}" in document`,
+        if (wordRegex.test(text)) {
+          matchFound = true;
+          
+          // Replace text with highlighted version
+          const parts = text.split(new RegExp(`(\\b${searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b)`, 'i'));
+          span.textContent = '';
+          
+          parts.forEach(part => {
+            if (wordRegex.test(part)) {
+              const highlight = document.createElement('span');
+              highlight.textContent = part;
+              highlight.className = 'search-highlight';
+              
+              // Scroll the highlight into view with a slight offset for better visibility
+              setTimeout(() => {
+                highlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }, 50);
+              
+              span.appendChild(highlight);
+            } else if (part) {
+              span.appendChild(document.createTextNode(part));
+            }
+          });
+        }
       });
     } else {
+      // Standard partial text search for user-initiated searches
+      spans.forEach(span => {
+        const text = span.textContent || '';
+        if (text.toLowerCase().includes(searchTermLower)) {
+          matchFound = true;
+          
+          // Replace text with highlighted version
+          const parts = text.split(new RegExp(`(${searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'i'));
+          span.textContent = '';
+          
+          parts.forEach(part => {
+            if (part.toLowerCase() === searchTermLower) {
+              const highlight = document.createElement('span');
+              highlight.textContent = part;
+              highlight.className = 'search-highlight';
+              span.appendChild(highlight);
+            } else if (part) {
+              span.appendChild(document.createTextNode(part));
+            }
+          });
+        }
+      });
+    }
+    
+    if (matchFound) {
+      if (!isSpeechReading) {
+        setHighlightedMatches(prev => [...prev, searchText]);
+        toast({
+          title: "Match found",
+          description: `Highlighted "${searchText}" in document`,
+        });
+      }
+    } else if (!isSpeechReading) {
       toast({
         title: "No match found",
         description: `Could not find "${searchText}" in current page`,
         variant: "destructive"
       });
     }
+    
+    return matchFound;
   };
 
   // Handle zoom controls
