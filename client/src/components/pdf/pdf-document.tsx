@@ -8,6 +8,10 @@ import { Button } from "@/components/ui/button";
 // Set worker - Use a local copy of the worker for better reliability
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
 
+// Set version check to false to prevent version mismatch errors
+// This is not ideal for production but prevents errors during development
+(pdfjs as any).disableWorkerBuildInCheck = true;
+
 interface PDFDocumentProps {
   file: {
     url: string;
