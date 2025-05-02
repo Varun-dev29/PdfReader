@@ -50,7 +50,8 @@ export default function RecentFilesPage() {
   }, [isAuthenticated, user]);
   
   const handleOpenFile = (fileId: number, fileUrl: string) => {
-    navigate(`/pdf?id=${fileId}&url=${encodeURIComponent(fileUrl)}`);
+    // Use the correct route format for the PDF viewer
+    navigate(`/pdf/${fileId}`);
   };
   
   const formatDate = (dateString: string) => {

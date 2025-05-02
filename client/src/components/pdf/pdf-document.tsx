@@ -251,6 +251,7 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
           // Split into individual words and try each one
           const words = cleanText.split(/\s+/);
           
+          // First try with individual words
           for (const word of words) {
             if (word.length > 2) { // Only search for words longer than 2 characters
               const wordFound = highlightTextInPdf(word, false);
@@ -261,10 +262,25 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
             }
           }
           
-          // If still not found, use a more lenient search approach
+          // If still not found, try with partial matches of individual words
+          if (!found) {
+            for (const word of words) {
+              if (word.length > 3) { // Only try partial matching for words longer than 3 characters
+                const partialMatch = highlightTextInPdf(word, false, true);
+                if (partialMatch) {
+                  found = true;
+                  break;
+                }
+              }
+            }
+          }
+          
+          // If still not found even with partial matching of words,
+          // use a more lenient search approach with the original query
           if (!found && cleanText.length > 3) {
+            // Try to match part of the original query
             const partialText = cleanText.substring(0, Math.ceil(cleanText.length * 0.7));
-            highlightTextInPdf(partialText, false, true); // Last param: forcePartialMatch
+            highlightTextInPdf(partialText, false, true);
           }
         }
       }
