@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useState, useEffect } from "react";
 
 export default function Sidebar() {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout, login } = useAuth();
   const { credits, todayUsage, maxDailyCredits } = useCredits();
   const [location, navigate] = useLocation();
   const [isVisible, setIsVisible] = useState(false);
@@ -52,7 +52,10 @@ export default function Sidebar() {
             <div className="ml-3">
               <h3 className="font-medium text-sm text-gray-900">Guest User</h3>
               <button 
-                onClick={() => setIsVisible(false)}
+                onClick={() => {
+                  // Use the login function from the component's scope
+                  if (login) login();
+                }}
                 className="text-xs text-primary hover:underline"
               >
                 Sign in to sync data

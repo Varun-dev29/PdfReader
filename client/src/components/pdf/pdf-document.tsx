@@ -5,8 +5,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 
-// Set worker
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+// Set worker - Use a more reliable CDN for the worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface PDFDocumentProps {
   file: {
@@ -31,11 +31,17 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
   const { startListening, isListening } = useSpeechRecognition();
   const { toast } = useToast();
 
-  // Start tracking usage time when PDF is loaded
+  // Start tracking usage time when PDF is loaded - use empty dependency array to run only once
   useEffect(() => {
-    startTracking();
-    return () => stopTracking();
-  }, [startTracking, stopTracking]);
+    if (startTracking) {
+      startTracking();
+    }
+    return () => {
+      if (stopTracking) {
+        stopTracking();
+      }
+    };
+  }, []);
 
   // Handle document load success
   const handleDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
