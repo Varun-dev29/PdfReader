@@ -235,19 +235,44 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
     startListening((text) => {
       setSearchText(text);
       if (text.trim()) {
+        // Clean the recognized text first (remove punctuation that might interfere with search)
+        const cleanText = text.trim().replace(/[^\w\s]/g, '');
+        
         toast({
           title: "Word recognized",
-          description: `Searching for: "${text}"`,
+          description: `Searching for: "${cleanText}"`,
         });
         
-        // Highlight words in text layer
-        highlightTextInPdf(text);
+        // Try to find the exact word first
+        let found = highlightTextInPdf(cleanText, false);
+        
+        // If exact word not found, try to find partial matches
+        if (!found) {
+          // Split into individual words and try each one
+          const words = cleanText.split(/\s+/);
+          
+          for (const word of words) {
+            if (word.length > 2) { // Only search for words longer than 2 characters
+              const wordFound = highlightTextInPdf(word, false);
+              if (wordFound) {
+                found = true;
+                break;
+              }
+            }
+          }
+          
+          // If still not found, use a more lenient search approach
+          if (!found && cleanText.length > 3) {
+            const partialText = cleanText.substring(0, Math.ceil(cleanText.length * 0.7));
+            highlightTextInPdf(partialText, false, true); // Last param: forcePartialMatch
+          }
+        }
       }
     });
   };
   
   // Function to highlight text in PDF
-  const highlightTextInPdf = (searchText: string, isSpeechReading = false) => {
+  const highlightTextInPdf = (searchText: string, isSpeechReading = false, forcePartialMatch = false): boolean => {
     if (!searchText.trim() || !containerRef.current) return false;
     
     // Clear previous highlights
@@ -308,18 +333,45 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
       // Standard partial text search for user-initiated searches
       spans.forEach(span => {
         const text = span.textContent || '';
-        if (text.toLowerCase().includes(searchTermLower)) {
+        
+        // For force partial match, we'll check if the text contains any part of the search term
+        let isMatch = false;
+        let matchRegex: RegExp | null = null;
+        
+        if (forcePartialMatch) {
+          // Check if any part of the search text is found in the content
+          isMatch = text.toLowerCase().includes(searchTermLower.substring(0, Math.ceil(searchTermLower.length * 0.7)));
+          if (isMatch) {
+            // Create a regex that will find the closest match to our search term
+            const escapedSearchTerm = searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            // This regex will match the most similar substring to our search term
+            matchRegex = new RegExp(`(${escapedSearchTerm.substring(0, Math.ceil(escapedSearchTerm.length * 0.7))})`, 'i');
+          }
+        } else {
+          // Standard exact match
+          isMatch = text.toLowerCase().includes(searchTermLower);
+          matchRegex = new RegExp(`(${searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'i');
+        }
+        
+        if (isMatch && matchRegex) {
           matchFound = true;
           
           // Replace text with highlighted version
-          const parts = text.split(new RegExp(`(${searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'i'));
+          const parts = text.split(matchRegex);
           span.textContent = '';
           
           parts.forEach(part => {
-            if (part.toLowerCase() === searchTermLower) {
+            // Check if this part matches our regex
+            if (matchRegex && matchRegex.test(part)) {
               const highlight = document.createElement('span');
               highlight.textContent = part;
               highlight.className = 'search-highlight';
+              
+              // Scroll the highlight into view
+              setTimeout(() => {
+                highlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }, 50);
+              
               span.appendChild(highlight);
             } else if (part) {
               span.appendChild(document.createTextNode(part));
