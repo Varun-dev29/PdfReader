@@ -53,8 +53,9 @@ export default function Sidebar() {
               <h3 className="font-medium text-sm text-gray-900">Guest User</h3>
               <button 
                 onClick={() => {
-                  // Use the login function from the component's scope
-                  if (login) login();
+                  // Import loginWithGoogle directly from firebase.ts
+                  const { loginWithGoogle } = require('@/lib/firebase');
+                  if (loginWithGoogle) loginWithGoogle();
                 }}
                 className="text-xs text-primary hover:underline"
               >

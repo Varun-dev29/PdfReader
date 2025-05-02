@@ -5,8 +5,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 
-// Set worker - Use a more reliable CDN for the worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+// Set worker - Use a local copy of the worker for better reliability
+pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
 
 interface PDFDocumentProps {
   file: {

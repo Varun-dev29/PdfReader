@@ -44,7 +44,11 @@ export default function Header() {
           
           {!isAuthenticated ? (
             <Button 
-              onClick={login}
+              onClick={() => {
+                // Import loginWithGoogle directly
+                const { loginWithGoogle } = require('@/lib/firebase');
+                if (loginWithGoogle) loginWithGoogle();
+              }}
               className="flex items-center rounded-full px-4 py-2 bg-primary text-white"
             >
               <span className="text-sm font-medium">Login</span>
