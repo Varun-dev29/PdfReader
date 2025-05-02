@@ -1,6 +1,7 @@
 import { useAuth, useCredits } from "@/lib/hooks";
 import { useLocation } from "wouter";
 import { useState, useEffect } from "react";
+import LoginButton from "@/components/login-button";
 
 export default function Sidebar() {
   const { user, isAuthenticated, logout, login } = useAuth();
@@ -51,16 +52,7 @@ export default function Sidebar() {
             </div>
             <div className="ml-3">
               <h3 className="font-medium text-sm text-gray-900">Guest User</h3>
-              <button 
-                onClick={() => {
-                  // Import loginWithGoogle directly from firebase.ts
-                  const { loginWithGoogle } = require('@/lib/firebase');
-                  if (loginWithGoogle) loginWithGoogle();
-                }}
-                className="text-xs text-primary hover:underline"
-              >
-                Sign in to sync data
-              </button>
+              <LoginButton variant="sidebar" />
             </div>
           </div>
         )}

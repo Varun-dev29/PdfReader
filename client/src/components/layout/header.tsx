@@ -2,6 +2,7 @@ import { useAuth, useCredits } from "@/lib/hooks";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { useState } from "react";
+import LoginButton from "@/components/login-button";
 
 export default function Header() {
   const { user, isAuthenticated, login } = useAuth();
@@ -43,16 +44,7 @@ export default function Header() {
           </div>
           
           {!isAuthenticated ? (
-            <Button 
-              onClick={() => {
-                // Import loginWithGoogle directly
-                const { loginWithGoogle } = require('@/lib/firebase');
-                if (loginWithGoogle) loginWithGoogle();
-              }}
-              className="flex items-center rounded-full px-4 py-2 bg-primary text-white"
-            >
-              <span className="text-sm font-medium">Login</span>
-            </Button>
+            <LoginButton />
           ) : (
             <div className="flex items-center">
               <Link href="/profile">
