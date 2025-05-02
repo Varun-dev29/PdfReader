@@ -173,6 +173,11 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
     stopSpeaking();
   };
 
+  // Speech settings
+  const [speechRate, setSpeechRate] = useState(1.0);
+  const [autoPageTurn, setAutoPageTurn] = useState(true);
+  const [highlightWords, setHighlightWords] = useState(true);
+
   // Handle text-to-speech for selected or all text
   const readSelectedText = () => {
     // If already playing, stop
@@ -183,7 +188,14 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
     
     // If text is selected, read that; otherwise read the whole page
     if (selectedText) {
-      speak(selectedText, { rate: speechRate });
+      speak(selectedText, { 
+        rate: speechRate,
+        onBoundary: (event) => {
+          if (highlightWords && event.name === 'word') {
+            highlightTextInPdf(event.word, true);
+          }
+        }
+      });
     } else {
       // Main function that reads the current page and then moves to the next page
       const readCurrentPage = () => {
