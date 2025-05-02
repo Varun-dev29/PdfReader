@@ -14,6 +14,8 @@ import {
   type Referral, type InsertReferral,
   type UsageTime, type InsertUsageTime
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, and, sql } from "drizzle-orm";
 
 // Storage interface for all CRUD operations
 export interface IStorage {
@@ -425,4 +427,312 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Database storage implementation
+export class DatabaseStorage implements IStorage {
+  // User operations
+  async getUser(id: number): Promise<User | undefined> {
+    const results = await db.select().from(users).where(eq(users.id, id));
+    return results[0];
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const results = await db.select().from(users).where(eq(users.username, username));
+    return results[0];
+  }
+  
+  async getUserByFirebaseUID(firebaseUID: string): Promise<User | undefined> {
+    const results = await db.select().from(users).where(eq(users.firebaseUID, firebaseUID));
+    return results[0];
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const result = await db.insert(users).values(insertUser).returning();
+    return result[0];
+  }
+  
+  async updateUser(id: number, data: Partial<User>): Promise<User | undefined> {
+    const results = await db.update(users)
+      .set(data)
+      .where(eq(users.id, id))
+      .returning();
+    return results[0];
+  }
+  
+  // File operations
+  async getFile(id: number): Promise<File | undefined> {
+    const results = await db.select().from(files).where(eq(files.id, id));
+    return results[0];
+  }
+  
+  async getFilesByUserId(userId: number): Promise<File[]> {
+    const results = await db.select().from(files).where(eq(files.userId, userId));
+    return results;
+  }
+  
+  async createFile(insertFile: InsertFile): Promise<File> {
+    const results = await db.insert(files).values(insertFile).returning();
+    return results[0];
+  }
+  
+  async updateFile(id: number, data: Partial<File>): Promise<File | undefined> {
+    const results = await db.update(files)
+      .set(data)
+      .where(eq(files.id, id))
+      .returning();
+    return results[0];
+  }
+  
+  async deleteFile(id: number): Promise<boolean> {
+    const results = await db.delete(files).where(eq(files.id, id)).returning();
+    return results.length > 0;
+  }
+  
+  // Bookmark operations
+  async getBookmark(id: number): Promise<Bookmark | undefined> {
+    const results = await db.select().from(bookmarks).where(eq(bookmarks.id, id));
+    return results[0];
+  }
+  
+  async getBookmarksByUserId(userId: number): Promise<Bookmark[]> {
+    const results = await db.select().from(bookmarks).where(eq(bookmarks.userId, userId));
+    return results;
+  }
+  
+  async getBookmarksByFileId(fileId: number): Promise<Bookmark[]> {
+    const results = await db.select().from(bookmarks).where(eq(bookmarks.fileId, fileId));
+    return results;
+  }
+  
+  async createBookmark(insertBookmark: InsertBookmark): Promise<Bookmark> {
+    const results = await db.insert(bookmarks).values(insertBookmark).returning();
+    return results[0];
+  }
+  
+  async deleteBookmark(id: number): Promise<boolean> {
+    const results = await db.delete(bookmarks).where(eq(bookmarks.id, id)).returning();
+    return results.length > 0;
+  }
+  
+  // Credit transaction operations
+  async getCreditTransaction(id: number): Promise<CreditTransaction | undefined> {
+    const results = await db.select().from(creditTransactions).where(eq(creditTransactions.id, id));
+    return results[0];
+  }
+  
+  async getCreditTransactionsByUserId(userId: number): Promise<CreditTransaction[]> {
+    const results = await db.select().from(creditTransactions).where(eq(creditTransactions.userId, userId));
+    return results;
+  }
+  
+  async createCreditTransaction(insertTransaction: InsertCreditTransaction): Promise<CreditTransaction> {
+    const results = await db.insert(creditTransactions).values(insertTransaction).returning();
+    
+    // Update user's credits
+    const user = await this.getUser(insertTransaction.userId);
+    if (user) {
+      await this.updateUser(user.id, { 
+        credits: user.credits + insertTransaction.amount 
+      });
+    }
+    
+    return results[0];
+  }
+  
+  // Redemption request operations
+  async getRedemptionRequest(id: number): Promise<RedemptionRequest | undefined> {
+    const results = await db.select().from(redemptionRequests).where(eq(redemptionRequests.id, id));
+    return results[0];
+  }
+  
+  async getRedemptionRequestsByUserId(userId: number): Promise<RedemptionRequest[]> {
+    const results = await db.select().from(redemptionRequests).where(eq(redemptionRequests.userId, userId));
+    return results;
+  }
+  
+  async createRedemptionRequest(insertRequest: InsertRedemptionRequest): Promise<RedemptionRequest> {
+    const now = new Date();
+    const requestWithDates = {
+      ...insertRequest,
+      status: "Pending",
+      createdAt: now,
+      updatedAt: now
+    };
+    
+    const results = await db.insert(redemptionRequests)
+      .values(requestWithDates)
+      .returning();
+    
+    // Deduct credits from user
+    const user = await this.getUser(insertRequest.userId);
+    if (user) {
+      await this.updateUser(user.id, { 
+        credits: user.credits - insertRequest.credits 
+      });
+      
+      // Create a credit transaction for the redemption
+      await this.createCreditTransaction({
+        userId: user.id,
+        amount: -insertRequest.credits,
+        type: "redemption",
+        referenceId: results[0].id.toString()
+      });
+    }
+    
+    return results[0];
+  }
+  
+  async updateRedemptionRequest(id: number, data: Partial<RedemptionRequest>): Promise<RedemptionRequest | undefined> {
+    const updatedData = {
+      ...data,
+      updatedAt: new Date()
+    };
+    
+    const results = await db.update(redemptionRequests)
+      .set(updatedData)
+      .where(eq(redemptionRequests.id, id))
+      .returning();
+      
+    return results[0];
+  }
+  
+  // Referral operations
+  async getReferral(id: number): Promise<Referral | undefined> {
+    const results = await db.select().from(referrals).where(eq(referrals.id, id));
+    return results[0];
+  }
+  
+  async getReferralsByReferrerId(referrerId: number): Promise<Referral[]> {
+    const results = await db.select().from(referrals).where(eq(referrals.referrerId, referrerId));
+    return results;
+  }
+  
+  async getReferralByCode(code: string): Promise<Referral | undefined> {
+    const results = await db.select().from(referrals).where(eq(referrals.code, code));
+    return results[0];
+  }
+  
+  async createReferral(insertReferral: InsertReferral): Promise<Referral> {
+    const referralWithDefaults = {
+      ...insertReferral,
+      daysUsed: 0,
+      completed: false,
+      rewarded: false
+    };
+    
+    const results = await db.insert(referrals)
+      .values(referralWithDefaults)
+      .returning();
+      
+    return results[0];
+  }
+  
+  async updateReferral(id: number, data: Partial<Referral>): Promise<Referral | undefined> {
+    // Get the current referral
+    const currentReferral = await this.getReferral(id);
+    if (!currentReferral) return undefined;
+    
+    const results = await db.update(referrals)
+      .set(data)
+      .where(eq(referrals.id, id))
+      .returning();
+      
+    const updatedReferral = results[0];
+    
+    // If marked as completed and not previously rewarded, give credits to referrer
+    if (data.completed === true && data.rewarded === true && !currentReferral.rewarded) {
+      const referrer = await this.getUser(currentReferral.referrerId);
+      if (referrer) {
+        // Add 100 credits (₹50) to referrer
+        await this.updateUser(referrer.id, { 
+          credits: referrer.credits + 100 
+        });
+        
+        // Create a credit transaction for the referral reward
+        await this.createCreditTransaction({
+          userId: referrer.id,
+          amount: 100,
+          type: "referral",
+          referenceId: id.toString()
+        });
+      }
+    }
+    
+    return updatedReferral;
+  }
+  
+  // Usage time operations
+  async getUsageTime(id: number): Promise<UsageTime | undefined> {
+    const results = await db.select().from(usageTime).where(eq(usageTime.id, id));
+    return results[0];
+  }
+  
+  async getUsageTimeByUserAndDate(userId: number, date: Date): Promise<UsageTime | undefined> {
+    // Normalize the date to start of day for comparison
+    const targetDate = new Date(date);
+    targetDate.setHours(0, 0, 0, 0);
+    
+    const results = await db.select().from(usageTime)
+      .where(and(
+        eq(usageTime.userId, userId),
+        sql`DATE(${usageTime.date}) = DATE(${targetDate})`
+      ));
+      
+    return results[0];
+  }
+  
+  async createUsageTime(insertUsageTime: InsertUsageTime): Promise<UsageTime> {
+    const results = await db.insert(usageTime)
+      .values(insertUsageTime)
+      .returning();
+      
+    return results[0];
+  }
+  
+  async updateUsageTime(id: number, data: Partial<UsageTime>): Promise<UsageTime | undefined> {
+    // Get current usage time
+    const currentUsageTime = await this.getUsageTime(id);
+    if (!currentUsageTime) return undefined;
+    
+    // Calculate new credits based on hours used, max 8 per day
+    const oldHours = Math.floor(currentUsageTime.seconds / 3600);
+    const newSeconds = (data.seconds !== undefined) ? data.seconds : currentUsageTime.seconds;
+    const newHours = Math.floor(newSeconds / 3600);
+    const maxHours = 8;
+    
+    // Calculate credits to add if hours increased
+    const creditsToAdd = Math.max(0, Math.min(newHours, maxHours) - oldHours);
+    
+    const updatedData = {
+      ...data,
+      credits: Math.min(maxHours, newHours)
+    };
+    
+    const results = await db.update(usageTime)
+      .set(updatedData)
+      .where(eq(usageTime.id, id))
+      .returning();
+      
+    // Add credits to user if hours increased
+    if (creditsToAdd > 0) {
+      const user = await this.getUser(currentUsageTime.userId);
+      if (user) {
+        await this.updateUser(user.id, { 
+          credits: user.credits + creditsToAdd 
+        });
+        
+        // Create a credit transaction for usage credits
+        await this.createCreditTransaction({
+          userId: user.id,
+          amount: creditsToAdd,
+          type: "usage",
+          referenceId: id.toString()
+        });
+      }
+    }
+    
+    return results[0];
+  }
+}
+
+// Use the database storage implementation
+export const storage = new DatabaseStorage();
