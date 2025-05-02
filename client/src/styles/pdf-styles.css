@@ -1,0 +1,69 @@
+/* PDF.js text layer styles */
+.react-pdf__Page__textContent {
+  border: 1px solid transparent;
+  opacity: 0.2;
+  user-select: text;
+}
+
+.react-pdf__Page__textContent > span {
+  position: absolute;
+  color: transparent;
+  line-height: 1;
+}
+
+.react-pdf__Page__textContent ::selection {
+  background-color: rgba(59, 130, 246, 0.3);
+}
+
+/* PDF.js annotation layer styles */
+.react-pdf__Page__annotations {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.react-pdf__Page__annotations .annotationLayer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.react-pdf__Page__annotations .linkAnnotation {
+  position: absolute;
+  cursor: pointer;
+  outline: none;
+}
+
+.react-pdf__Page__annotations .linkAnnotation:hover {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+/* Highlight style for search */
+.search-highlight {
+  background-color: #ffeb3b;
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  .pdf-controls {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .pdf-controls > div {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .pdf-page {
+    max-width: 100vw !important;
+    height: auto !important;
+  }
+}

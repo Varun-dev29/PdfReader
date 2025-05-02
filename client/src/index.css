@@ -1,3 +1,6 @@
+/* Import PDF styles */
+@import './styles/pdf-styles.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

@@ -9,15 +9,38 @@ export default function Sidebar() {
   const [location, navigate] = useLocation();
   const [isVisible, setIsVisible] = useState(false);
 
-  // Show sidebar on menu toggle
+  // Handle menu toggle
   useEffect(() => {
-    const handleMenuToggle = () => {
-      setIsVisible(false);
-    };
-
-    document.addEventListener('click', handleMenuToggle);
-    return () => document.removeEventListener('click', handleMenuToggle);
+    const menuToggle = document.getElementById('menuToggle');
+    if (menuToggle) {
+      const handleMenuToggle = () => {
+        setIsVisible(prev => !prev);
+      };
+      
+      menuToggle.addEventListener('click', handleMenuToggle);
+      return () => menuToggle.removeEventListener('click', handleMenuToggle);
+    }
   }, []);
+  
+  // Close sidebar when clicking outside on mobile
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isVisible) {
+        const sidebar = document.getElementById('sidebar');
+        const menuToggle = document.getElementById('menuToggle');
+        
+        if (sidebar && 
+            !sidebar.contains(event.target as Node) && 
+            menuToggle && 
+            !menuToggle.contains(event.target as Node)) {
+          setIsVisible(false);
+        }
+      }
+    };
+    
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [isVisible]);
 
   // Calculate usage percentage
   const usagePercentage = Math.min(100, (todayUsage / (maxDailyCredits * 3600)) * 100);
