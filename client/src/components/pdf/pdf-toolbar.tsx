@@ -93,28 +93,16 @@ export default function PDFToolbar({
         </div>
         
         <div className="flex items-center space-x-1 md:space-x-2">
-          <div className="flex items-center space-x-2">
-            <Button
-              onClick={onReadAloud}
-              variant="ghost"
-              className="p-2 rounded-md hover:bg-gray-100 text-gray-700 flex items-center text-sm"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-              </svg>
-              <span className="hidden md:inline ml-1">Read Aloud</span>
-            </Button>
-            <select 
-              className="text-sm border rounded px-2 py-1"
-              onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
-              value={speechRate}
-            >
-              <option value="0.5">0.5x</option>
-              <option value="1">1x</option>
-              <option value="1.5">1.5x</option>
-              <option value="2">2x</option>
-            </select>
-          </div>
+          <Button
+            onClick={onReadAloud}
+            variant="ghost"
+            className="p-2 rounded-md hover:bg-gray-100 text-gray-700 flex items-center text-sm"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+            </svg>
+            <span className="hidden md:inline ml-1">Read Aloud</span>
+          </Button>
           <Button
             onClick={onFindWord}
             variant="ghost"
