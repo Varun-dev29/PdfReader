@@ -6,6 +6,7 @@ import Home from "@/pages/home";
 import PdfViewer from "@/pages/pdf-viewer";
 import Redeem from "@/pages/redeem";
 import Refer from "@/pages/refer";
+import Recent from "@/pages/recent";
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
 import MobileNavigation from "@/components/layout/mobile-navigation";
@@ -33,7 +34,7 @@ function App() {
               <Route path="/pdf/:id" component={PdfViewer} />
               <Route path="/redeem" component={Redeem} />
               <Route path="/refer" component={Refer} />
-              <Route path="/recent" component={(props) => <NotFound {...props} title="Recent Files" message="Recent files page is coming soon" />} />
+              <Route path="/recent" component={Recent} />
               <Route path="/bookmarks" component={(props) => <NotFound {...props} title="Bookmarks" message="Bookmarks page is coming soon" />} />
               <Route path="/settings" component={(props) => <NotFound {...props} title="Settings" message="Settings page is coming soon" />} />
               <Route component={(props) => <NotFound {...props} />} />
