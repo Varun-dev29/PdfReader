@@ -49,7 +49,13 @@ export function generateUniqueId(): string {
 export const storage = {
   getRecentFiles: (): any[] => {
     try {
-      return JSON.parse(localStorage.getItem('pdfReader_recentFiles') || '[]');
+      const files = JSON.parse(localStorage.getItem('pdfReader_recentFiles') || '[]');
+      // Convert date strings back to Date objects
+      return files.map((file: any) => ({
+        ...file,
+        lastOpenedAt: file.lastOpenedAt ? new Date(file.lastOpenedAt) : new Date(),
+        createdAt: file.createdAt ? new Date(file.createdAt) : new Date()
+      }));
     } catch (e) {
       return [];
     }
@@ -80,7 +86,12 @@ export const storage = {
   
   getBookmarks: (): any[] => {
     try {
-      return JSON.parse(localStorage.getItem('pdfReader_bookmarks') || '[]');
+      const bookmarks = JSON.parse(localStorage.getItem('pdfReader_bookmarks') || '[]');
+      // Convert date strings back to Date objects
+      return bookmarks.map((bookmark: any) => ({
+        ...bookmark,
+        createdAt: bookmark.createdAt ? new Date(bookmark.createdAt) : new Date()
+      }));
     } catch (e) {
       return [];
     }
