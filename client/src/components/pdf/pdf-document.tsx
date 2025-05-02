@@ -28,6 +28,8 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
   const [selectedText, setSelectedText] = useState<string>("");
   const [searchText, setSearchText] = useState<string>("");
   const [highlightedMatches, setHighlightedMatches] = useState<string[]>([]);
+  const [isRateMenuOpen, setIsRateMenuOpen] = useState(false);
+  const [speechRate, setSpeechRate] = useState<number>(1);
   const containerRef = useRef<HTMLDivElement>(null);
   
   const { startTracking, stopTracking } = useUsageTracking();
@@ -61,7 +63,7 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
   };
 
   const goToNextPage = () => {
-    setPageNumber(pageNumber + 1 <= numPages! ? pageNumber + 1 : numPages!);
+    setPageNumber(pageNumber + 1 <= (numPages || 1) ? pageNumber + 1 : (numPages || 1));
   };
 
   // Handle text selection
@@ -166,6 +168,11 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
     return wordsWithContext;
   };
   
+  // Function to stop speech
+  const stop = () => {
+    stopSpeaking();
+  };
+
   // Handle text-to-speech for selected or all text
   const readSelectedText = () => {
     // If already playing, stop
@@ -178,55 +185,71 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
     if (selectedText) {
       speak(selectedText, { rate: speechRate });
     } else {
-      const wordsWithContext = getPageWordsWithContext();
-      
-      if (wordsWithContext.length > 0) {
-        let currentIndex = 0;
+      const readCurrentPage = () => {
+        const wordsWithContext = getPageWordsWithContext();
         
-        const speakNextWord = () => {
-          if (currentIndex < wordsWithContext.length && !window.speechSynthesis.paused) {
-            const { word, cleanWord } = wordsWithContext[currentIndex];
-            
-            // First highlight the word, then speak it
-            const highlightSuccess = highlightTextInPdf(cleanWord, true);
-            
-            speak(word, { 
-              rate: speechRate,
-              onEnd: () => {
+        if (wordsWithContext.length > 0) {
+          let currentIndex = 0;
+          
+          const speakNextWord = () => {
+            if (currentIndex < wordsWithContext.length && !window.speechSynthesis.paused) {
+              const { word, cleanWord } = wordsWithContext[currentIndex];
+              
+              // First highlight the word, then speak it
+              const highlightSuccess = highlightTextInPdf(cleanWord, true);
+              
+              speak(word, { 
+                rate: speechRate,
+                onEnd: () => {
+                  setTimeout(() => {
+                    currentIndex++;
+                    
+                    // Continue to next word only if we're still playing
+                    if (!window.speechSynthesis.paused) {
+                      speakNextWord();
+                    }
+                  }, 50); // Smaller delay between words for more natural reading
+                }
+              });
+            } else if (currentIndex >= wordsWithContext.length) {
+              // Check if there's a next page available
+              if (pageNumber < (numPages || 1)) {
+                // Move to the next page and continue reading
                 setTimeout(() => {
-                  currentIndex++;
-                  
-                  // Continue to next word only if we're still playing
                   if (!window.speechSynthesis.paused) {
-                    speakNextWord();
+                    goToNextPage();
+                    // After a brief pause to allow page to load, continue reading
+                    setTimeout(() => {
+                      if (!window.speechSynthesis.paused) {
+                        readCurrentPage();
+                      }
+                    }, 500);
                   }
-                }, 50); // Smaller delay between words for more natural reading
+                }, 300);
+              } else {
+                // We've reached the end of the document
+                toast({
+                  title: "Finished reading",
+                  description: "Completed reading the entire document",
+                });
               }
-            });
-          } else if (currentIndex >= wordsWithContext.length) {
-            toast({
-              title: "Finished reading",
-              description: "Completed reading the current page",
-            });
-          }
-        };
+            }
+          };
         
-        speakNextWord();
-      } else {
-        toast({
-          title: "No text found",
-          description: "Could not extract text from the current page.",
-          variant: "destructive",
-        });
-      }
+          speakNextWord();
+        } else {
+          toast({
+            title: "No text found",
+            description: "Could not extract text from the current page.",
+            variant: "destructive",
+          });
+        }
+      };
+      
+      // Start reading the current page
+      readCurrentPage();
     }
   };
-  
-  // Speech rate options
-  const [isRateMenuOpen, setIsRateMenuOpen] = useState(false);
-
-  // Speech rate for TTS
-  const [speechRate, setSpeechRate] = useState<number>(1);
   
   // Handle speech recognition for word finding
   const handleSpeechRecognition = () => {
@@ -235,20 +258,40 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
     startListening((text) => {
       setSearchText(text);
       if (text.trim()) {
-        // Clean the recognized text first (remove punctuation that might interfere with search)
-        const cleanText = text.trim().replace(/[^\w\s]/g, '');
+        // Clean the recognized text first (remove excessive punctuation but keep spaces)
+        const cleanText = text.trim().replace(/[^a-zA-Z0-9\s]/g, '');
         
         toast({
-          title: "Word recognized",
+          title: "Text recognized",
           description: `Searching for: "${cleanText}"`,
         });
         
-        // Try to find the exact word first
+        // First, try to find the exact phrase/sentence
         let found = highlightTextInPdf(cleanText, false);
         
-        // If exact word not found, try to find partial matches
+        // If full phrase not found and it contains multiple words, try subsequences
+        if (!found && cleanText.split(/\s+/).length > 1) {
+          // Try to find the largest subsequence that matches
+          const words = cleanText.split(/\s+/);
+          
+          // Try different subsequences of the phrase (in descending size)
+          for (let windowSize = words.length - 1; windowSize > 0; windowSize--) {
+            for (let startIdx = 0; startIdx <= words.length - windowSize; startIdx++) {
+              const subPhrase = words.slice(startIdx, startIdx + windowSize).join(' ');
+              if (subPhrase.length > 3) { // Only search for meaningful phrases
+                const phraseFound = highlightTextInPdf(subPhrase, false);
+                if (phraseFound) {
+                  found = true;
+                  break;
+                }
+              }
+            }
+            if (found) break;
+          }
+        }
+        
+        // If still not found, try individual words
         if (!found) {
-          // Split into individual words and try each one
           const words = cleanText.split(/\s+/);
           
           // First try with individual words
@@ -421,6 +464,16 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
   const zoomOut = () => setScale(scale - 0.2 > 0.5 ? scale - 0.2 : 0.5);
   const resetZoom = () => setScale(1);
 
+  // Handle speech rate change
+  const handleRateChange = (rate: number) => {
+    setSpeechRate(rate);
+    setIsRateMenuOpen(false);
+    toast({
+      title: "Speech rate changed",
+      description: `Reading speed set to ${rate}x`,
+    });
+  };
+
   return (
     <div className="pdf-container" ref={containerRef} onMouseUp={handleTextSelection}>
       <div className="flex justify-center p-2 md:p-6 bg-gray-200 min-h-screen">
@@ -493,106 +546,96 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
                   title="Zoom out"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 12H4" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10H7" />
                   </svg>
                 </Button>
                 <Button 
-                  onClick={resetZoom}
+                  onClick={resetZoom} 
                   variant="outline"
                   size="sm"
                   title="Reset zoom"
                 >
-                  {Math.round(scale * 100)}%
+                  <span className="text-xs font-medium">{Math.round(scale * 100)}%</span>
                 </Button>
                 <Button 
-                  onClick={zoomIn}
+                  onClick={zoomIn} 
                   variant="outline"
                   size="sm"
                   title="Zoom in"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10H7M10 7v6" />
                   </svg>
                 </Button>
               </div>
               
-              {/* Read and Search controls */}
+              {/* Read options and speech controls */}
               <div className="flex space-x-2 w-full md:w-auto justify-center">
                 <div className="relative">
-                  <div className="flex gap-1">
-                    <Button
-                      onClick={readSelectedText}
-                      disabled={isPlaying && !isTextSelected}
-                      variant={isPlaying ? "destructive" : "outline"}
-                      size="sm"
-                      title={isPlaying ? "Stop reading" : isTextSelected ? "Read selected text" : "Read page"}
-                      className="flex items-center"
-                    >
-                      {isPlaying ? (
-                        <>
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
-                          </svg>
-                          Stop
-                        </>
-                      ) : (
-                        <>
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                          </svg>
-                          Read
-                        </>
-                      )}
-                    </Button>
-                    
-                    <Button
-                      onClick={() => setIsRateMenuOpen(!isRateMenuOpen)}
-                      variant="outline"
-                      size="sm"
-                      className="px-2"
-                      title="Speech rate"
-                    >
-                      {speechRate}x <span className="ml-1">▼</span>
-                    </Button>
-                  </div>
+                  <Button
+                    onClick={() => setIsRateMenuOpen(!isRateMenuOpen)}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    {speechRate}x
+                  </Button>
                   
-                  {/* Speech rate dropdown */}
                   {isRateMenuOpen && (
-                    <div className="absolute right-0 mt-1 w-40 bg-white rounded-md shadow-lg z-10 border border-gray-200 text-xs">
-                      <div className="flex justify-between items-center p-2 border-b">
-                        <span className="font-medium">Speech Rate</span>
-                        <span className="bg-primary/10 text-primary rounded px-1">{speechRate}x</span>
-                      </div>
-                      <div className="max-h-48 overflow-auto">
-                        {[0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2].map((rate) => (
-                          <button
-                            key={rate}
-                            onClick={() => {
-                              setSpeechRate(rate);
-                              setIsRateMenuOpen(false);
-                            }}
-                            className={`w-full text-left px-4 py-2 hover:bg-gray-100 ${speechRate === rate ? 'bg-primary/10 text-primary' : ''}`}
-                          >
-                            {rate}x {rate === 1 && "(Normal)"}
-                          </button>
-                        ))}
-                      </div>
+                    <div className="absolute z-10 mt-1 bg-white rounded-md shadow-lg py-1 w-20">
+                      {[0.5, 0.75, 1, 1.25, 1.5, 1.75, 2].map((rate) => (
+                        <button
+                          key={rate}
+                          className={`block w-full text-left px-4 py-1 text-sm ${
+                            rate === speechRate ? 'bg-primary text-white' : 'hover:bg-gray-100'
+                          }`}
+                          onClick={() => handleRateChange(rate)}
+                        >
+                          {rate}x
+                        </button>
+                      ))}
                     </div>
                   )}
                 </div>
                 
                 <Button
-                  onClick={handleSpeechRecognition}
-                  variant={isListening ? "destructive" : "outline"}
+                  onClick={readSelectedText}
+                  disabled={isPlaying && !isTextSelected}
+                  variant={isPlaying ? "destructive" : "outline"}
                   size="sm"
-                  title={isListening ? "Listening..." : "Find word by voice"}
+                >
+                  {isPlaying ? (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                      </svg>
+                      Stop
+                    </>
+                  ) : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                      </svg>
+                      Read Aloud
+                    </>
+                  )}
+                </Button>
+                
+                <Button
+                  onClick={handleSpeechRecognition}
+                  disabled={isListening}
+                  variant={isListening ? "outline" : "outline"}
+                  size="sm"
                 >
                   {isListening ? (
                     <>
-                      <svg className="animate-pulse h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                      </svg>
+                      <Spinner className="h-4 w-4 mr-1" />
                       Listening...
                     </>
                   ) : (
