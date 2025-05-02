@@ -33,6 +33,9 @@ function App() {
               <Route path="/pdf/:id" component={PdfViewer} />
               <Route path="/redeem" component={Redeem} />
               <Route path="/refer" component={Refer} />
+              <Route path="/recent" component={() => <NotFound title="Recent Files" message="Recent files page is coming soon" />} />
+              <Route path="/bookmarks" component={() => <NotFound title="Bookmarks" message="Bookmarks page is coming soon" />} />
+              <Route path="/settings" component={() => <NotFound title="Settings" message="Settings page is coming soon" />} />
               <Route component={NotFound} />
             </Switch>
           </main>
