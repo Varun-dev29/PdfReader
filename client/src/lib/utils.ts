@@ -218,6 +218,11 @@ export const tts = {
     if (options.pitch) utterance.pitch = options.pitch;
     if (options.volume) utterance.volume = options.volume;
     
+    // Set the onEnd callback if provided
+    if (options.onEnd) {
+      utterance.onend = options.onEnd;
+    }
+    
     // Speak the text
     speechSynthesis.speak(utterance);
     
@@ -255,6 +260,7 @@ interface SpeechSynthesisUtteranceOptions {
   rate?: number;
   pitch?: number;
   volume?: number;
+  onEnd?: () => void;
 }
 
 // Speech recognition utilities

@@ -76,16 +76,73 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
     }
   };
 
-  // Handle text-to-speech for selected text
+  // Extract and read all text from the current page
+  const extractAllTextFromPage = () => {
+    if (!containerRef.current) return '';
+    
+    const textLayer = containerRef.current.querySelector('.react-pdf__Page__textContent');
+    if (!textLayer) return '';
+    
+    const textSpans = textLayer.querySelectorAll('span');
+    let extractedText = '';
+    
+    textSpans.forEach(span => {
+      const text = span.textContent || '';
+      if (text.trim()) {
+        extractedText += text + ' ';
+      }
+    });
+    
+    return extractedText.trim();
+  };
+  
+  // Handle text-to-speech for selected or all text
   const readSelectedText = () => {
+    // If already playing, stop
+    if (isPlaying) {
+      stop();
+      return;
+    }
+    
+    // If text is selected, read that; otherwise read the whole page
     if (selectedText) {
       speak(selectedText, { rate: speechRate });
     } else {
-      toast({
-        title: "No text selected",
-        description: "Please select text to read aloud.",
-        variant: "destructive",
-      });
+      const allText = extractAllTextFromPage();
+      if (allText) {
+        // Split by words to show highlighting for each word as they're spoken
+        const words = allText.split(/\s+/);
+        let currentIndex = 0;
+        
+        const speakNextWord = () => {
+          if (currentIndex < words.length) {
+            const word = words[currentIndex];
+            highlightTextInPdf(word);
+            speak(word, { 
+              rate: speechRate,
+              onEnd: () => {
+                setTimeout(() => {
+                  currentIndex++;
+                  speakNextWord();
+                }, 100); // Small delay between words
+              }
+            });
+          } else {
+            toast({
+              title: "Finished reading",
+              description: "Completed reading the current page",
+            });
+          }
+        };
+        
+        speakNextWord();
+      } else {
+        toast({
+          title: "No text found",
+          description: "Could not extract text from the current page.",
+          variant: "destructive",
+        });
+      }
     }
   };
   
@@ -181,7 +238,7 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
 
   return (
     <div className="pdf-container" ref={containerRef} onMouseUp={handleTextSelection}>
-      <div className="flex justify-center p-4 md:p-8 bg-gray-200 min-h-screen">
+      <div className="flex justify-center p-2 md:p-6 bg-gray-200 min-h-screen">
         <div className="w-full max-w-4xl">
           <Document
             file={file.url}
@@ -280,10 +337,10 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
                   <div className="flex gap-1">
                     <Button
                       onClick={readSelectedText}
-                      disabled={!isTextSelected && !isPlaying}
+                      disabled={isPlaying && !isTextSelected}
                       variant={isPlaying ? "destructive" : "outline"}
                       size="sm"
-                      title={isPlaying ? "Stop reading" : "Read selected text"}
+                      title={isPlaying ? "Stop reading" : isTextSelected ? "Read selected text" : "Read page"}
                       className="flex items-center"
                     >
                       {isPlaying ? (
