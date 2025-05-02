@@ -56,9 +56,12 @@ export default function Home() {
               <div className="ml-4">
                 <h4 className="text-lg font-medium text-gray-900">Text-to-Speech</h4>
                 <p className="mt-2 text-sm text-gray-600">Listen to your documents with our advanced text-to-speech feature. Great for multitasking or learning on the go.</p>
-                <Link href="/features/tts">
-                  <a className="mt-3 text-sm font-medium text-secondary">Learn More</a>
-                </Link>
+                <span 
+                  onClick={() => window.location.href = "/features/tts"} 
+                  className="mt-3 text-sm font-medium text-secondary cursor-pointer inline-block"
+                >
+                  Learn More
+                </span>
               </div>
             </div>
           </div>
@@ -73,9 +76,12 @@ export default function Home() {
               <div className="ml-4">
                 <h4 className="text-lg font-medium text-gray-900">Word Recognition</h4>
                 <p className="mt-2 text-sm text-gray-600">Use voice to find and highlight specific words in your document. Perfect for research and studying.</p>
-                <Link href="/features/word-recognition">
-                  <a className="mt-3 text-sm font-medium text-primary">Learn More</a>
-                </Link>
+                <span 
+                  onClick={() => window.location.href = "/features/word-recognition"} 
+                  className="mt-3 text-sm font-medium text-primary cursor-pointer inline-block"
+                >
+                  Learn More
+                </span>
               </div>
             </div>
           </div>

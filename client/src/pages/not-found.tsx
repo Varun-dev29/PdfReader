@@ -4,6 +4,8 @@ import { AlertCircle, Construction } from "lucide-react";
 interface NotFoundProps {
   title?: string;
   message?: string;
+  // Add route params from wouter
+  params?: any;
 }
 
 export default function NotFound({ 
