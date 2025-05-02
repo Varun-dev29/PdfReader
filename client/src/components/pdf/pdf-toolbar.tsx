@@ -123,27 +123,6 @@ export default function PDFToolbar({
             </svg>
             <span className="hidden md:inline ml-1">Bookmark</span>
           </Button>
-          <div className="flex items-center border rounded-md px-2 py-1 bg-gray-50">
-            <button 
-              onClick={onPrevPage}
-              disabled={pageNumber <= 1}
-              className="p-1"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${pageNumber <= 1 ? 'text-gray-300' : 'text-gray-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <span className="mx-2 text-sm font-medium">Page {pageNumber} of {totalPages}</span>
-            <button 
-              onClick={onNextPage}
-              disabled={pageNumber >= totalPages}
-              className="p-1"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${pageNumber >= totalPages ? 'text-gray-300' : 'text-gray-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
         </div>
       </div>
     </div>
