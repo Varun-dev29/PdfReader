@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "wouter";
+import { useLocation, Link } from "wouter";
 import { formatFileSize, formatDate, storage } from "@/lib/utils";
 import { useAuth } from "@/lib/hooks";
 import { db, collection, query, orderBy, limit, getDocs } from "@/lib/firebase";
@@ -7,6 +7,7 @@ import { PDFFile } from "@/lib/types";
 
 export default function RecentFiles() {
   const { isAuthenticated, user } = useAuth();
+  const [location, navigate] = useLocation();
   const [recentFiles, setRecentFiles] = useState<PDFFile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -56,9 +57,12 @@ export default function RecentFiles() {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">Recent Files</h3>
-          <Link href="/recent">
-            <a className="text-sm font-medium text-primary">View All</a>
-          </Link>
+          <div 
+            onClick={() => navigate('/recent')}
+            className="text-sm font-medium text-primary cursor-pointer"
+          >
+            View All
+          </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -115,34 +119,48 @@ export default function RecentFiles() {
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {recentFiles.map((file) => (
-          <Link key={file.id} href={`/pdf/${file.id}`}>
-            <a className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200 hover:shadow-md transition">
-              <div className="h-32 bg-gray-100 p-4 flex items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-primary/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <div className="p-4">
-                <h4 className="font-medium text-gray-900 truncate">{file.name}</h4>
-                <p className="text-sm text-gray-500 mt-1">Last opened: {formatDate(file.lastOpenedAt)}</p>
-                <div className="flex items-center justify-between mt-3">
-                  <span className="text-xs text-gray-500">{file.pageCount ? `${file.pageCount} pages` : formatFileSize(file.size)}</span>
-                  <div className="flex items-center space-x-2">
-                    <button className="p-1 rounded-full hover:bg-gray-100">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                      </svg>
-                    </button>
-                    <button className="p-1 rounded-full hover:bg-gray-100">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </button>
-                  </div>
+          <div 
+            key={file.id}
+            onClick={() => navigate(`/pdf/${file.id}`)}
+            className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200 hover:shadow-md transition cursor-pointer"
+          >
+            <div className="h-32 bg-gray-100 p-4 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-primary/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div className="p-4">
+              <h4 className="font-medium text-gray-900 truncate">{file.name}</h4>
+              <p className="text-sm text-gray-500 mt-1">Last opened: {formatDate(file.lastOpenedAt)}</p>
+              <div className="flex items-center justify-between mt-3">
+                <span className="text-xs text-gray-500">{file.pageCount ? `${file.pageCount} pages` : formatFileSize(file.size)}</span>
+                <div className="flex items-center space-x-2">
+                  <button 
+                    className="p-1 rounded-full hover:bg-gray-100"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Add bookmark functionality
+                    }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                    </svg>
+                  </button>
+                  <button 
+                    className="p-1 rounded-full hover:bg-gray-100"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Show options menu
+                    }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </button>
                 </div>
               </div>
-            </a>
-          </Link>
+            </div>
+          </div>
         ))}
       </div>
     </div>
