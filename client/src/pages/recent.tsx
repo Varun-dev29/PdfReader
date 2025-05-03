@@ -50,8 +50,25 @@ export default function RecentFilesPage() {
   }, [isAuthenticated, user]);
   
   const handleOpenFile = (fileId: number, fileUrl: string) => {
-    // Use the correct route format for the PDF viewer
+    if (!fileUrl) {
+      toast({
+        title: "Error",
+        description: "File URL not found",
+        variant: "destructive"
+      });
+      return;
+    }
     navigate(`/pdf/${fileId}`);
+    // Update last opened timestamp
+    if (isAuthenticated && user) {
+      fetch(`/api/users/${user.uid}/files/${fileId}/open`, { method: 'POST' });
+    } else {
+      const files = JSON.parse(localStorage.getItem('pdfReader_recentFiles') || '[]');
+      const updatedFiles = files.map((f: any) => 
+        f.id === fileId ? {...f, lastOpened: new Date().toISOString()} : f
+      );
+      localStorage.setItem('pdfReader_recentFiles', JSON.stringify(updatedFiles));
+    }
   };
   
   const formatDate = (dateString: string) => {
@@ -141,8 +158,24 @@ export default function RecentFilesPage() {
                   <Button 
                     variant="ghost" 
                     size="sm"
-                    className="flex-none"
+                    className="flex-none hover:bg-red-100"
                     title="Delete file"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const updatedFiles = files.filter(f => f.id !== file.id);
+                      setFiles(updatedFiles);
+                      if (isAuthenticated && user) {
+                        // Delete from Firebase
+                        fetch(`/api/users/${user.uid}/files/${file.id}`, { method: 'DELETE' });
+                      } else {
+                        // Delete from localStorage
+                        localStorage.setItem('pdfReader_recentFiles', JSON.stringify(updatedFiles));
+                      }
+                      toast({
+                        title: "File deleted",
+                        description: `${file.name} has been removed from recent files`
+                      });
+                    }}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
