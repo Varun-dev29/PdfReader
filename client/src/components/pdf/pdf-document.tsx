@@ -46,6 +46,18 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
       if (stopTracking) {
         stopTracking();
       }
+      // Cleanup speech and highlights when component unmounts
+      stop();
+      const container = containerRef.current;
+      if (container) {
+        const highlights = container.querySelectorAll(".search-highlight, .current-word");
+        highlights.forEach(el => {
+          const parent = el.parentNode;
+          if (parent) {
+            parent.textContent = el.textContent;
+          }
+        });
+      }
     };
   }, []);
 
@@ -237,14 +249,30 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
             utterance.voice = voices[0];
           }
 
+          // Highlight current chunk in extracted text
+          const extractedTextContainer = containerRef.current?.querySelector(".extracted-text");
+          if (extractedTextContainer) {
+            const text = extractedTextContainer.textContent || "";
+            const chunkIndex = text.toLowerCase().indexOf(chunk.toLowerCase());
+            if (chunkIndex !== -1) {
+              extractedTextContainer.innerHTML = text.slice(0, chunkIndex) +
+                `<span class="current-word">${text.slice(chunkIndex, chunkIndex + chunk.length)}</span>` +
+                text.slice(chunkIndex + chunk.length);
+            }
+          }
+
           utterance.onend = () => {
             if (isSpeaking) {
               currentIndex += 20;
               if (currentIndex < words.length) {
-                readNextWord(); // Remove delay between chunks
+                readNextWord();
               } else {
                 setIsPlaying(false);
                 isSpeaking = false;
+                // Clear highlight when finished
+                if (extractedTextContainer) {
+                  extractedTextContainer.innerHTML = extractedTextContainer.textContent || "";
+                }
               }
             }
           };
@@ -599,7 +627,7 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
 
             <div className="mt-4 bg-white rounded-lg shadow-sm p-4">
               <h3 className="text-sm font-medium text-gray-700 mb-2">Extracted Text</h3>
-              <div className="text-sm text-gray-600 whitespace-pre-wrap">
+              <div className="text-sm text-gray-600 whitespace-pre-wrap extracted-text">
                 {extractAllTextFromPage()}
               </div>
             </div>

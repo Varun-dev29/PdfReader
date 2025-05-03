@@ -133,6 +133,14 @@
   100% { background-color: #ffeb3b; box-shadow: 0 0 4px rgba(255, 235, 59, 0.7); }
 }
 
+.current-word {
+  background-color: #4CAF50;
+  color: white;
+  padding: 0 2px;
+  border-radius: 3px;
+  transition: background-color 0.3s ease;
+}
+
 /* Mobile optimizations */
 @media (max-width: 640px) {
   .pdf-controls {
