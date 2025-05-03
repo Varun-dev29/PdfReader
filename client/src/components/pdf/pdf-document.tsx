@@ -421,58 +421,91 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
           const cleanText = text.trim().replace(/[^a-zA-Z0-9\s.,!?]/g, "");
 
           toast({
-            title: "Text recognized",
-            description: `Searching for: "${cleanText}"`,
+            title: "Voice search started",
+            description: `Looking for: "${cleanText}"`,
           });
 
+          // First try exact match
           let found = highlightTextInPdf(cleanText, false);
 
+          // If no exact match and text has multiple words, try finding the longest matching phrase
           if (!found && cleanText.split(/\s+/).length > 1) {
             const words = cleanText.split(/\s+/);
+            
+            // Try finding complete sentences first
+            const sentences = cleanText.split(/[.!?]+/).filter(s => s.trim());
+            for (const sentence of sentences) {
+              if (sentence.trim().length > 3) {
+                found = highlightTextInPdf(sentence.trim(), false);
+                if (found) break;
+              }
+            }
 
-            for (let windowSize = words.length - 1; windowSize > 0; windowSize--) {
-              for (let startIdx = 0; startIdx <= words.length - windowSize; startIdx++) {
-                const subPhrase = words.slice(startIdx, startIdx + windowSize).join(" ");
-                if (subPhrase.length > 3) {
-                  const phraseFound = highlightTextInPdf(subPhrase, false);
-                  if (phraseFound) {
-                    found = true;
-                    break;
+            // If no sentences found, try word combinations
+            if (!found) {
+              for (let windowSize = words.length - 1; windowSize > 0; windowSize--) {
+                for (let startIdx = 0; startIdx <= words.length - windowSize; startIdx++) {
+                  const phrase = words.slice(startIdx, startIdx + windowSize).join(" ");
+                  if (phrase.length > 3) {
+                    found = highlightTextInPdf(phrase, false);
+                    if (found) {
+                      toast({
+                        title: "Partial match found",
+                        description: `Found phrase: "${phrase}"`,
+                      });
+                      break;
+                    }
                   }
                 }
+                if (found) break;
               }
-              if (found) break;
             }
           }
 
+          // If still not found, try individual words
           if (!found) {
             const words = cleanText.split(/\s+/);
+            let foundWords = [];
 
             for (const word of words) {
               if (word.length > 2) {
                 const wordFound = highlightTextInPdf(word, false);
                 if (wordFound) {
+                  foundWords.push(word);
                   found = true;
-                  break;
                 }
               }
             }
 
-            if (!found) {
+            if (foundWords.length > 0) {
+              toast({
+                title: "Words found",
+                description: `Found: ${foundWords.join(", ")}`,
+              });
+            } else {
+              // Try fuzzy matching as last resort
               for (const word of words) {
                 if (word.length > 3) {
                   const partialMatch = highlightTextInPdf(word, false, true);
                   if (partialMatch) {
+                    foundWords.push(word);
                     found = true;
-                    break;
                   }
                 }
               }
-            }
 
-            if (!found && cleanText.length > 3) {
-              const partialText = cleanText.substring(0, Math.ceil(cleanText.length * 0.7));
-              highlightTextInPdf(partialText, false, true);
+              if (foundWords.length > 0) {
+                toast({
+                  title: "Similar matches found",
+                  description: `Found similar words to: ${foundWords.join(", ")}`,
+                });
+              } else {
+                toast({
+                  title: "No matches found",
+                  description: "Try speaking more clearly or using different words",
+                  variant: "destructive",
+                });
+              }
             }
           }
         }
