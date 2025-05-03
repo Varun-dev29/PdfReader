@@ -7,6 +7,8 @@ import PdfViewer from "@/pages/pdf-viewer";
 import Redeem from "@/pages/redeem";
 import Refer from "@/pages/refer";
 import Recent from "@/pages/recent";
+import Bookmarks from "@/pages/bookmarks";
+import Settings from "@/pages/settings";
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
 import MobileNavigation from "@/components/layout/mobile-navigation";
