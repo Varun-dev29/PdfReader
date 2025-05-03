@@ -104,8 +104,12 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
     let lastTop = -1;
 
     textSpans.forEach((span) => {
-      const text = span.textContent || "";
-      if (text.trim()) {
+      const text = (span.textContent || "")
+        .toLowerCase()
+        .replace(/[^\w\s]/g, '')
+        .trim();
+      
+      if (text) {
         const currentTop = parseInt(span.style.top);
 
         if (lastTop !== -1 && Math.abs(currentTop - lastTop) > 15) {
