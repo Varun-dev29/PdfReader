@@ -172,7 +172,8 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
 
   const readSelectedText = () => {
     if (isPlaying) {
-      stop();
+      stopSpeaking();
+      setIsPlaying(false);
       return;
     }
 
@@ -185,8 +186,8 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
         }
       });
     } else {
-      const allText = extractAllTextFromPage();
-      if (!allText) {
+      const pageText = extractAllTextFromPage();
+      if (!pageText) {
         toast({
           title: "No text found",
           description: "Could not find any text to read on this page.",
@@ -196,37 +197,12 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
       }
 
       setIsPlaying(true);
-      const sentences = allText
-        .split(/(?<=[.!?])\s+/)
-        .map(s => s.trim())
-        .filter(s => s.length > 0);
-
-      let currentIndex = 0;
-      let isSpeaking = true;
-
-      const readNextSentence = () => {
-        if (!isSpeaking) return;
-
-        if (currentIndex < sentences.length) {
-          const sentence = sentences[currentIndex];
-          speak(sentence, {
-            rate: speechRate,
-            pitch: 1,
-            volume: 1,
-            onEnd: () => {
-              if (isSpeaking) {
-                currentIndex++;
-                setTimeout(readNextSentence, 300);
-              }
-            }
-          });
-        } else {
+      speak(pageText, {
+        rate: speechRate,
+        onEnd: () => {
           setIsPlaying(false);
-          isSpeaking = false;
         }
-      };
-
-      readNextSentence();
+      });
     }
   };
 
