@@ -210,14 +210,11 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
                 .replace(/[^\w\s.,!?-]/g, ' ') // Replace special characters with spaces
                 .replace(/\s+/g, ' ') // Normalize multiple spaces
                 .replace(/([A-Z])/g, (match) => ` ${match.toLowerCase()}`) // Handle capital letters
+                .replace(/(\d+)/g, (match) => match.split('').join(' ')) // Space out numbers
                 .trim();
 
-              // Add natural pause based on punctuation
-              const sentenceDelay = cleanWord.match(/[.!?]$/) ? 1000 : 500;
-
-              // First highlight the sentence, then speak it after a brief delay
-              setTimeout(() => {
-                const highlightSuccess = highlightTextInPdf(cleanWord, true);
+              // First highlight the sentence, then speak it
+              const highlightSuccess = highlightTextInPdf(cleanWord, true);
 
               // Format text for better reading - remove excessive symbols and normalize spacing
               const formattedForSpeech = formattedText
@@ -236,10 +233,7 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
                 pitch: 1,
                 volume: 1,
                 onEnd: () => {
-                  // Add delay based on punctuation and sentence length
-                  const delay = cleanWord.length > 50 ? 1500 : 
-                               cleanWord.match(/[.!?]$/) ? 1000 : 500;
-                  
+                  // Longer delay between sentences for better comprehension
                   setTimeout(() => {
                     // Move to the next sentence
                     currentIndex++;
