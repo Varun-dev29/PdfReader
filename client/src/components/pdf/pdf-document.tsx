@@ -210,18 +210,22 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
             ) {
               const { word, cleanWord } = wordsWithContext[currentIndex];
 
-              // Clean the text for better speech formatting
+              // Clean and prepare the text for natural speech
               const formattedText = cleanWord
-                .replace(/[^\w\s.,!?-]/g, '') // Remove special characters except basic punctuation
-                .replace(/\s+/g, ' ') // Normalize spaces
-                .replace(/([A-Z])/g, ' $1') // Add space before capital letters for better pronunciation
+                .replace(/[^\w\s.,!?-]/g, ' ') // Replace special characters with spaces
+                .replace(/\s+/g, ' ') // Normalize multiple spaces
+                .replace(/([A-Z])/g, (match) => ` ${match.toLowerCase()}`) // Handle capital letters
+                .replace(/(\d+)/g, (match) => match.split('').join(' ')) // Space out numbers
                 .trim();
 
               // First highlight the sentence, then speak it
               const highlightSuccess = highlightTextInPdf(cleanWord, true);
 
-              // Speak the formatted text
+              // Configure speech settings for better word reading
               speak(formattedText, {
+                rate: speechRate,
+                pitch: 1,
+                volume: 1,
                 rate: speechRate,
                 onEnd: () => {
                   // Small delay to make reading feel more natural
