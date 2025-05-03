@@ -188,26 +188,45 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
     }
 
     setIsPlaying(true);
-    const utterance = new SpeechSynthesisUtterance(textToRead);
-    utterance.rate = speechRate;
-    utterance.pitch = 1;
-    utterance.volume = 1;
-
-    utterance.onend = () => {
-      setIsPlaying(false);
-    };
-
-    utterance.onerror = () => {
-      setIsPlaying(false);
-      toast({
-        title: "Error",
-        description: "An error occurred while reading the text",
-        variant: "destructive",
-      });
-    };
-
     window.speechSynthesis.cancel(); // Cancel any ongoing speech
-    window.speechSynthesis.speak(utterance);
+
+    // Split text into smaller chunks (roughly 200 characters each)
+    const chunks = textToRead.match(/.{1,200}(?:\s|$)/g) || [];
+    let currentChunk = 0;
+
+    const speakChunk = () => {
+      if (!isPlaying || currentChunk >= chunks.length) {
+        setIsPlaying(false);
+        return;
+      }
+
+      const utterance = new SpeechSynthesisUtterance(chunks[currentChunk]);
+      utterance.rate = speechRate;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+
+      utterance.onend = () => {
+        currentChunk++;
+        if (currentChunk < chunks.length) {
+          speakChunk();
+        } else {
+          setIsPlaying(false);
+        }
+      };
+
+      utterance.onerror = () => {
+        setIsPlaying(false);
+        toast({
+          title: "Error",
+          description: "An error occurred while reading the text",
+          variant: "destructive",
+        });
+      };
+
+      window.speechSynthesis.speak(utterance);
+    };
+
+    speakChunk();
   };
 
   const readCurrentPage = () => {
