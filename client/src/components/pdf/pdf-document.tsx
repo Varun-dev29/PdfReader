@@ -31,8 +31,65 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
   const [isRateMenuOpen, setIsRateMenuOpen] = useState(false);
   const [speechRate, setSpeechRate] = useState<number>(1);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false); // Added state for fullscreen
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [rotation, setRotation] = useState<number>(0);
+  const [isPinching, setIsPinching] = useState(false);
+  const [startDistance, setStartDistance] = useState<number>(0);
+  const [startScale, setStartScale] = useState<number>(1);
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const touchRef = useRef<{ x: number; y: number } | null>(null);
+
+  // Handle touch events for pinch zoom
+  const handleTouchStart = (e: TouchEvent) => {
+    if (e.touches.length === 2) {
+      setIsPinching(true);
+      const distance = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      setStartDistance(distance);
+      setStartScale(scale);
+    } else if (e.touches.length === 1) {
+      touchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+  };
+
+  const handleTouchMove = (e: TouchEvent) => {
+    if (isPinching && e.touches.length === 2) {
+      const distance = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const newScale = (startScale * distance) / startDistance;
+      setScale(Math.min(Math.max(newScale, 0.5), 3));
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsPinching(false);
+    touchRef.current = null;
+  };
+
+  useEffect(() => {
+    const element = containerRef.current;
+    if (element) {
+      element.addEventListener('touchstart', handleTouchStart as any);
+      element.addEventListener('touchmove', handleTouchMove as any);
+      element.addEventListener('touchend', handleTouchEnd as any);
+    }
+    return () => {
+      if (element) {
+        element.removeEventListener('touchstart', handleTouchStart as any);
+        element.removeEventListener('touchmove', handleTouchMove as any);
+        element.removeEventListener('touchend', handleTouchEnd as any);
+      }
+    };
+  }, [scale, startDistance, startScale, isPinching]);
+
+  const rotateLeft = () => setRotation((prev) => (prev - 90) % 360);
+  const rotateRight = () => setRotation((prev) => (prev + 90) % 360);
 
   const { startTracking, stopTracking } = useUsageTracking();
   const { speak, stop: stopSpeaking } = useTTS();
@@ -431,7 +488,7 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
           // If no exact match and text has multiple words, try finding the longest matching phrase
           if (!found && cleanText.split(/\s+/).length > 1) {
             const words = cleanText.split(/\s+/);
-            
+
             // Try finding complete sentences first
             const sentences = cleanText.split(/[.!?]+/).filter(s => s.trim());
             for (const sentence of sentences) {
@@ -645,7 +702,7 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
   };
 
   return (
-    <div className="pdf-container" ref={containerRef} onMouseUp={handleTextSelection}>
+    <div className="pdf-container" ref={containerRef} onMouseUp={handleTextSelection} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
       <div className="flex justify-center p-2 md:p-6 bg-gray-200 min-h-screen">
         <div className="w-full max-w-4xl">
           <Document
@@ -688,6 +745,7 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
               renderTextLayer={true}
               className="pdf-page shadow-sm bg-white mx-auto"
               renderAnnotationLayer={true}
+              rotation={rotation}
             />
 
             <div className="mt-4 bg-white rounded-lg shadow-sm p-4">
@@ -715,6 +773,16 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
               </div>
 
               <div className="flex space-x-2 w-full md:w-auto justify-center">
+                <Button onClick={rotateLeft} variant="outline" size="sm" title="Rotate left">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7M9 5v14M15 19l-7-7 7-7" />
+                  </svg>
+                </Button>
+                <Button onClick={rotateRight} variant="outline" size="sm" title="Rotate right">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7M15 19v-4M15 19h-4" />
+                  </svg>
+                </Button>
                 <Button onClick={zoomOut} variant="outline" size="sm" title="Zoom out">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -751,8 +819,7 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
                     {speechRate}x
                   </Button>
 
-                  {isRateMenuOpen && (
-                    <div className="absolute z-10 mt-1 bg-white rounded-md shadow-lg py-1 w-20">
+                  {isRateMenuOpen && (                    <div className="absolute z-10 mt-1 bg-white rounded-md shadow-lg py-1 w-20">
                       {[0.5, 0.75, 1, 1.25, 1.5, 1.75, 2].map((rate) => (
                         <button
                           key={rate}
@@ -812,6 +879,15 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
                     </>
                   )}
                 </Button>
+                <Button onClick={() => setIsBookmarked(!isBookmarked)} variant="outline" size="sm">
+                  {isBookmarked ? "Remove Bookmark" : "Bookmark"}
+                </Button>
+                <Button onClick={() => setShowSettings(!showSettings)} variant="outline" size="sm">Settings</Button>
+                {showSettings && (
+                  <div className="absolute z-10 mt-1 bg-white rounded-md shadow-lg p-2">
+                    <p>Settings will go here</p>
+                  </div>
+                )}
               </div>
             </div>
           </Document>

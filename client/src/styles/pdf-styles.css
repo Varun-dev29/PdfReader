@@ -157,6 +157,17 @@
   transition: background-color 0.3s ease;
 }
 
+/* Touch handling */
+.pdf-container {
+  touch-action: none; /* Disable browser handling of touch events */
+  -webkit-overflow-scrolling: touch;
+  user-select: none;
+}
+
+.pdf-container .react-pdf__Page {
+  transition: transform 0.2s ease;
+}
+
 /* Mobile optimizations */
 @media (max-width: 640px) {
   .pdf-controls {
