@@ -141,38 +141,33 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
     context: string;
   }
 
-  // Get all words from the page text with context (sentence or paragraph)
+  // Get all sentences from the page text
   const getPageWordsWithContext = (): WordWithContext[] => {
     const allText = extractAllTextFromPage();
     if (!allText) return [];
 
-    // Split by paragraphs, preserving line breaks
-    const paragraphs = allText.split(/\n+/);
+    // Split text into sentences using proper punctuation
+    const sentences = allText
+      .split(/(?<=[.!?])\s+/)
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
 
     const wordsWithContext: WordWithContext[] = [];
 
-    paragraphs.forEach((paragraph) => {
-      // Split paragraph into sentences, considering proper line breaks
-      const sentences = paragraph
-        .split(/(?<=[.!?])\s+/)
-        .map((s) => s.trim())
-        .filter((s) => s.length > 0);
+    sentences.forEach((sentence) => {
+      // Clean the sentence while preserving natural reading flow
+      const cleanSentence = sentence
+        .replace(/[^\w\s.,!?-]|_/g, '') // Keep essential punctuation
+        .replace(/\s+/g, ' ') // Normalize spaces
+        .trim();
 
-      sentences.forEach((sentence) => {
-        // Clean the sentence of special characters while preserving structure
-        const cleanSentence = sentence
-          .replace(/[^\w\s.,!?]|_/g, "") // Keep basic punctuation
-          .replace(/\s+/g, " ") // Normalize spaces
-          .trim();
-
-        if (cleanSentence) {
-          wordsWithContext.push({
-            word: cleanSentence, // Cleaned sentence for reading
-            cleanWord: cleanSentence, // Same sentence for highlighting
-            context: sentence, // Original sentence for context
-          });
-        }
-      });
+      if (cleanSentence) {
+        wordsWithContext.push({
+          word: cleanSentence,
+          cleanWord: cleanSentence,
+          context: sentence,
+        });
+      }
     });
 
     return wordsWithContext;
@@ -221,14 +216,13 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
               // First highlight the sentence, then speak it
               const highlightSuccess = highlightTextInPdf(cleanWord, true);
 
-              // Configure speech settings for better word reading
+              // Configure speech settings for natural reading
               speak(formattedText, {
                 rate: speechRate,
                 pitch: 1,
                 volume: 1,
-                rate: speechRate,
                 onEnd: () => {
-                  // Small delay to make reading feel more natural
+                  // Small delay between sentences for natural pacing
                   setTimeout(() => {
                     // Move to the next sentence
                     currentIndex++;
