@@ -879,15 +879,7 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
                     </>
                   )}
                 </Button>
-                <Button onClick={() => setIsBookmarked(!isBookmarked)} variant="outline" size="sm">
-                  {isBookmarked ? "Remove Bookmark" : "Bookmark"}
-                </Button>
-                <Button onClick={() => setShowSettings(!showSettings)} variant="outline" size="sm">Settings</Button>
-                {showSettings && (
-                  <div className="absolute z-10 mt-1 bg-white rounded-md shadow-lg p-2">
-                    <p>Settings will go here</p>
-                  </div>
-                )}
+                
               </div>
             </div>
           </Document>

@@ -35,8 +35,8 @@ function App() {
               <Route path="/redeem" component={Redeem} />
               <Route path="/refer" component={Refer} />
               <Route path="/recent" component={Recent} />
-              <Route path="/bookmarks" component={(props) => <NotFound {...props} title="Bookmarks" message="Bookmarks page is coming soon" />} />
-              <Route path="/settings" component={(props) => <NotFound {...props} title="Settings" message="Settings page is coming soon" />} />
+              <Route path="/bookmarks" component={Bookmarks} />
+              <Route path="/settings" component={Settings} />
               <Route component={(props) => <NotFound {...props} />} />
             </Switch>
           </main>
