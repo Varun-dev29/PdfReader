@@ -113,9 +113,35 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
       return true;
     };
 
-    // Function to remove consecutive duplicate words
+    // Function to remove consecutive duplicate words and phrases
     const removeRepeatedWords = (text: string) => {
-      return text.split(/\s+/).filter((word, index, arr) => word !== arr[index - 1]).join(' ');
+      // First pass: remove repeated single words
+      let result = text.split(/\s+/).filter((word, index, arr) => word !== arr[index - 1]).join(' ');
+      
+      // Second pass: remove repeated phrases
+      const words = result.split(/\s+/);
+      const cleanedWords = [];
+      
+      for (let i = 0; i < words.length; i++) {
+        let skipCount = 0;
+        // Check for repeated phrases up to 4 words long
+        for (let phraseLength = 2; phraseLength <= 4 && i + phraseLength * 2 <= words.length; phraseLength++) {
+          const phrase1 = words.slice(i, i + phraseLength).join(' ');
+          const phrase2 = words.slice(i + phraseLength, i + phraseLength * 2).join(' ');
+          if (phrase1.toLowerCase() === phrase2.toLowerCase()) {
+            skipCount = phraseLength * 2 - 1;
+            break;
+          }
+        }
+        if (skipCount === 0) {
+          cleanedWords.push(words[i]);
+        } else {
+          cleanedWords.push(...words.slice(i, i + phraseLength));
+          i += skipCount;
+        }
+      }
+      
+      return cleanedWords.join(' ');
     };
 
     textSpans.forEach((span) => {
