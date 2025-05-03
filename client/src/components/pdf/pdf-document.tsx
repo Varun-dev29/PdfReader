@@ -176,34 +176,60 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
     }
 
     if (selectedText) {
-      speak(selectedText, { rate: speechRate });
+      speak(selectedText, { 
+        rate: speechRate,
+        onEnd: () => {
+          setIsPlaying(false);
+        }
+      });
     } else {
       const allText = extractAllTextFromPage();
+      if (!allText) {
+        toast({
+          title: "No text found",
+          description: "Could not find any text to read on this page.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const sentences = allText
         .split(/(?<=[.!?])\s+/)
         .map(s => s.trim())
         .filter(s => s.length > 0);
 
       let currentIndex = 0;
+      let isSpeaking = true;
 
       const readNextSentence = () => {
-        if (currentIndex < sentences.length && !window.speechSynthesis.paused) {
+        if (!isSpeaking) return;
+        
+        if (currentIndex < sentences.length) {
           const sentence = sentences[currentIndex];
           speak(sentence, {
             rate: speechRate,
             pitch: 1,
             volume: 1,
             onEnd: () => {
-              setTimeout(() => {
+              if (isSpeaking) {
                 currentIndex++;
-                readNextSentence();
-              }, 500);
+                setTimeout(readNextSentence, 300);
+              }
             }
           });
+        } else {
+          setIsPlaying(false);
+          isSpeaking = false;
         }
       };
 
       readNextSentence();
+
+      return () => {
+        isSpeaking = false;
+        stop();
+      };
+    }
 
       const readCurrentPage = () => {
         const wordsWithContext = getPageWordsWithContext();
