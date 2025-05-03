@@ -219,7 +219,6 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
   const stop = () => {
     window.speechSynthesis.cancel();
     setIsPlaying(false);
-    isSpeaking = false;
   };
 
   const readSelectedText = () => {
