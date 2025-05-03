@@ -166,8 +166,9 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
   };
 
   const stop = () => {
-    stopSpeaking();
+    window.speechSynthesis.cancel();
     setIsPlaying(false);
+    isSpeaking = false;
   };
 
   const readSelectedText = () => {
@@ -223,8 +224,8 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
           // Cancel any ongoing speech
           window.speechSynthesis.cancel();
 
-          // Create shorter chunks of text to avoid synthesis errors
-          const chunk = words.slice(currentIndex, currentIndex + 5).join(" ");
+          // Process larger chunks for smoother reading
+          const chunk = words.slice(currentIndex, currentIndex + 20).join(" ");
           const utterance = new SpeechSynthesisUtterance(chunk);
           utterance.rate = speechRate;
           utterance.pitch = 1;
@@ -233,16 +234,17 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
           // Wait for voices to load if needed
           const voices = window.speechSynthesis.getVoices();
           if (voices.length > 0) {
-            utterance.voice = voices[0]; // Use first available voice
+            utterance.voice = voices[0];
           }
 
           utterance.onend = () => {
             if (isSpeaking) {
-              currentIndex += 5;
+              currentIndex += 20;
               if (currentIndex < words.length) {
-                setTimeout(readNextWord, 250); // Increased delay between chunks
+                readNextWord(); // Remove delay between chunks
               } else {
                 setIsPlaying(false);
+                isSpeaking = false;
               }
             }
           };
