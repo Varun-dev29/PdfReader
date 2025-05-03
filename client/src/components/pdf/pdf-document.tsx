@@ -186,10 +186,39 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
       return;
     }
 
-    // If text is selected, read that; otherwise read the whole page
+    // If text is selected, read that; otherwise read all sentences from the page
     if (selectedText) {
       speak(selectedText, { rate: speechRate });
     } else {
+      // Get all sentences from the current page
+      const allText = extractAllTextFromPage();
+      const sentences = allText
+        .split(/(?<=[.!?])\s+/)
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+
+      // Read each sentence with proper pacing
+      let currentIndex = 0;
+
+      const readNextSentence = () => {
+        if (currentIndex < sentences.length && !window.speechSynthesis.paused) {
+          const sentence = sentences[currentIndex];
+          speak(sentence, {
+            rate: speechRate,
+            pitch: 1,
+            volume: 1,
+            onEnd: () => {
+              setTimeout(() => {
+                currentIndex++;
+                readNextSentence();
+              }, 500); // Half second pause between sentences
+            }
+          });
+        }
+      };
+
+      readNextSentence();
+    }
       // Main function that reads the current page and then moves to the next page
       const readCurrentPage = () => {
         const wordsWithContext = getPageWordsWithContext();
