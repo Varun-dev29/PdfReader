@@ -187,45 +187,84 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
       return;
     }
 
-    setIsPlaying(true);
-    window.speechSynthesis.cancel();
-
-    const words = textToRead.split(/\s+/).filter(word => word.length > 0);
-    let currentIndex = 0;
-
-    const readNextWord = () => {
-      if (!isPlaying || currentIndex >= words.length) {
-        setIsPlaying(false);
-        return;
+    try {
+      if (!window.speechSynthesis) {
+        throw new Error("Text-to-speech is not supported in this browser");
       }
 
-      const utterance = new SpeechSynthesisUtterance(words[currentIndex]);
-      utterance.rate = speechRate;
-      utterance.pitch = 1;
-      utterance.volume = 1;
+      setIsPlaying(true);
+      window.speechSynthesis.cancel();
 
-      utterance.onend = () => {
-        currentIndex++;
-        if (currentIndex < words.length && isPlaying) {
-          setTimeout(readNextWord, 100); // 0.1s delay
-        } else {
+      // Clean and split the text
+      const words = textToRead
+        .replace(/[^\w\s.,!?-]/g, ' ')
+        .split(/\s+/)
+        .filter(word => word.length > 0);
+
+      if (words.length === 0) {
+        throw new Error("No readable text found");
+      }
+
+      let currentIndex = 0;
+      let isSpeaking = true;
+
+      const readNextWord = () => {
+        if (!isSpeaking || currentIndex >= words.length) {
           setIsPlaying(false);
+          return;
+        }
+
+        try {
+          const utterance = new SpeechSynthesisUtterance(words[currentIndex]);
+          utterance.rate = speechRate;
+          utterance.pitch = 1;
+          utterance.volume = 1;
+
+          utterance.onend = () => {
+            if (isSpeaking) {
+              currentIndex++;
+              if (currentIndex < words.length) {
+                setTimeout(readNextWord, 100);
+              } else {
+                setIsPlaying(false);
+              }
+            }
+          };
+
+          utterance.onerror = (event) => {
+            console.error('Speech synthesis error:', event);
+            isSpeaking = false;
+            setIsPlaying(false);
+            toast({
+              title: "Error",
+              description: "Failed to read text. Please try again.",
+              variant: "destructive",
+            });
+          };
+
+          window.speechSynthesis.speak(utterance);
+        } catch (error) {
+          console.error('Speech synthesis error:', error);
+          isSpeaking = false;
+          setIsPlaying(false);
+          toast({
+            title: "Error",
+            description: "Failed to process text. Please try again.",
+            variant: "destructive",
+          });
         }
       };
 
-      utterance.onerror = () => {
-        setIsPlaying(false);
-        toast({
-          title: "Error",
-          description: "An error occurred while reading the text",
-          variant: "destructive",
-        });
-      };
-
-      window.speechSynthesis.speak(utterance);
-    };
-
-    readNextWord();
+      readNextWord();
+    } catch (error) {
+      console.error('Text-to-speech initialization error:', error);
+      setIsPlaying(false);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to initialize text-to-speech",
+        variant: "destructive",
+      });
+    }
   };
 
   const readCurrentPage = () => {
