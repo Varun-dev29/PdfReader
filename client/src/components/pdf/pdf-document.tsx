@@ -31,7 +31,7 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
   const [isRateMenuOpen, setIsRateMenuOpen] = useState(false);
   const [speechRate, setSpeechRate] = useState<number>(1);
   const containerRef = useRef<HTMLDivElement>(null);
-  
+
   const { startTracking, stopTracking } = useUsageTracking();
   const { speak, stop: stopSpeaking, isPlaying } = useTTS();
   const { startListening, isListening } = useSpeechRecognition();
@@ -81,76 +81,76 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
   // Extract and read all text from the current page
   const extractAllTextFromPage = () => {
     if (!containerRef.current) return '';
-    
+
     const textLayer = containerRef.current.querySelector('.react-pdf__Page__textContent');
     if (!textLayer) return '';
-    
+
     // Get all span elements and sort them by position (top to bottom, left to right)
     const textSpans = Array.from(textLayer.querySelectorAll('span')).sort((a, b) => {
       const aTop = parseInt(a.style.top);
       const bTop = parseInt(b.style.top);
       const aLeft = parseInt(a.style.left);
       const bLeft = parseInt(b.style.left);
-      
+
       // If they're roughly on the same line (within 15px), sort by left position
       if (Math.abs(aTop - bTop) < 15) {
         return aLeft - bLeft;
       }
-      
+
       // Otherwise sort by top position
       return aTop - bTop;
     });
-    
+
     let extractedText = '';
     let lastTop = -1;
-    
+
     textSpans.forEach(span => {
       const text = span.textContent || '';
       if (text.trim()) {
         const currentTop = parseInt(span.style.top);
-        
+
         // If we've moved to a new line, add a space or newline
         if (lastTop !== -1 && Math.abs(currentTop - lastTop) > 15) {
           extractedText += '\n';
         } else if (extractedText && !extractedText.endsWith(' ') && !extractedText.endsWith('\n')) {
           extractedText += ' ';
         }
-        
+
         extractedText += text;
         lastTop = currentTop;
       }
     });
-    
+
     return extractedText.trim();
   };
-  
+
   // Define an interface for word context
   interface WordWithContext {
     word: string;
     cleanWord: string;
     context: string;
   }
-  
+
   // Get all words from the page text with context (sentence or paragraph)
   const getPageWordsWithContext = (): WordWithContext[] => {
     const allText = extractAllTextFromPage();
     if (!allText) return [];
-    
+
     // Split text into words while preserving their context
     // Each item contains the word and the sentence/paragraph it belongs to
     const wordsWithContext: WordWithContext[] = [];
-    
+
     // Split by sentences or paragraphs
     const paragraphs = allText.split(/\n+/);
-    
+
     paragraphs.forEach(paragraph => {
       // Split paragraph into sentences
       const sentences = paragraph.split(/(?<=[.!?])\s+/);
-      
+
       sentences.forEach(sentence => {
         // Split sentence into words
         const words = sentence.split(/\s+/).filter(w => w.trim());
-        
+
         // Add the entire sentence instead of individual words
         if (sentence.trim()) {
           wordsWithContext.push({
@@ -161,10 +161,10 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
         }
       });
     });
-    
+
     return wordsWithContext;
   };
-  
+
   // Function to stop speech
   const stop = () => {
     stopSpeaking();
@@ -177,7 +177,7 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
       stop();
       return;
     }
-    
+
     // If text is selected, read that; otherwise read the whole page
     if (selectedText) {
       speak(selectedText, { rate: speechRate });
@@ -185,18 +185,18 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
       // Main function that reads the current page and then moves to the next page
       const readCurrentPage = () => {
         const wordsWithContext = getPageWordsWithContext();
-        
+
         if (wordsWithContext.length > 0) {
           let currentIndex = 0;
-          
-          const speakNextWord = () => {
+
+          const speakNextSentence = () => {
             // If there are more words on this page and we haven't paused
             if (currentIndex < wordsWithContext.length && !window.speechSynthesis.paused) {
               const { word, cleanWord } = wordsWithContext[currentIndex];
-              
+
               // First highlight the word, then speak it
               const highlightSuccess = highlightTextInPdf(cleanWord, true);
-              
+
               // Note: Only continue to the next word after the current one finishes speaking
               speak(word, { 
                 rate: speechRate,
@@ -205,12 +205,12 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
                   setTimeout(() => {
                     // Move to the next word
                     currentIndex++;
-                    
+
                     // If we're still actively playing (not manually stopped)
                     if (!window.speechSynthesis.paused) {
-                      speakNextWord();
+                      speakNextSentence();
                     }
-                  }, 20); // Very small delay between words for more natural reading
+                  }, 500); // Increased delay between sentences
                 }
               });
             } 
@@ -224,7 +224,7 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
                   if (!window.speechSynthesis.paused) {
                     // Navigate to the next page
                     goToNextPage();
-                    
+
                     // Wait a moment for the page to fully load before reading
                     setTimeout(() => {
                       if (!window.speechSynthesis.paused) {
@@ -243,14 +243,14 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
               }
             }
           };
-        
+
           // Start the reading process on this page
-          speakNextWord();
+          speakNextSentence();
         } else {
           // If no text could be extracted, try moving to the next page
           if (pageNumber < (numPages || 1)) {
             goToNextPage();
-            
+
             // Wait for the next page to load
             setTimeout(() => {
               if (!window.speechSynthesis.paused) {
@@ -267,12 +267,12 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
           }
         }
       };
-      
+
       // Start the reading process
       readCurrentPage();
     }
   };
-  
+
   // Handle speech recognition for word finding
   const handleSpeechRecognition = () => {
     if (isListening) return;
@@ -282,20 +282,20 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
       if (text.trim()) {
         // Clean the recognized text first (remove excessive punctuation but keep spaces)
         const cleanText = text.trim().replace(/[^a-zA-Z0-9\s]/g, '');
-        
+
         toast({
           title: "Text recognized",
           description: `Searching for: "${cleanText}"`,
         });
-        
+
         // First, try to find the exact phrase/sentence
         let found = highlightTextInPdf(cleanText, false);
-        
+
         // If full phrase not found and it contains multiple words, try subsequences
         if (!found && cleanText.split(/\s+/).length > 1) {
           // Try to find the largest subsequence that matches
           const words = cleanText.split(/\s+/);
-          
+
           // Try different subsequences of the phrase (in descending size)
           for (let windowSize = words.length - 1; windowSize > 0; windowSize--) {
             for (let startIdx = 0; startIdx <= words.length - windowSize; startIdx++) {
@@ -311,11 +311,11 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
             if (found) break;
           }
         }
-        
+
         // If still not found, try individual words
         if (!found) {
           const words = cleanText.split(/\s+/);
-          
+
           // First try with individual words
           for (const word of words) {
             if (word.length > 2) { // Only search for words longer than 2 characters
@@ -326,7 +326,7 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
               }
             }
           }
-          
+
           // If still not found, try with partial matches of individual words
           if (!found) {
             for (const word of words) {
@@ -339,7 +339,7 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
               }
             }
           }
-          
+
           // If still not found even with partial matching of words,
           // use a more lenient search approach with the original query
           if (!found && cleanText.length > 3) {
@@ -351,11 +351,11 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
       }
     });
   };
-  
+
   // Function to highlight text in PDF
   const highlightTextInPdf = (searchText: string, isSpeechReading = false, forcePartialMatch = false): boolean => {
     if (!searchText.trim() || !containerRef.current) return false;
-    
+
     // Clear previous highlights
     const previousHighlights = containerRef.current.querySelectorAll('.search-highlight');
     previousHighlights.forEach(el => {
@@ -366,43 +366,43 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
         parent.replaceChild(textNode, el);
       }
     });
-    
+
     // Find text in the text layer
     const textLayer = containerRef.current.querySelector('.react-pdf__Page__textContent');
     if (!textLayer) return false;
-    
+
     const spans = textLayer.querySelectorAll('span');
     const searchTermLower = searchText.toLowerCase();
-    
+
     let matchFound = false;
-    
+
     // For exact word matching during speech reading
     if (isSpeechReading) {
       // Search for exact word matches (words should match whole or be surrounded by spaces/punctuation)
       spans.forEach(span => {
         const text = span.textContent || '';
-        
+
         // Check if the span contains the exact word (with word boundaries)
         const wordRegex = new RegExp(`\\b${searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
-        
+
         if (wordRegex.test(text)) {
           matchFound = true;
-          
+
           // Replace text with highlighted version
           const parts = text.split(new RegExp(`(\\b${searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b)`, 'i'));
           span.textContent = '';
-          
+
           parts.forEach(part => {
             if (wordRegex.test(part)) {
               const highlight = document.createElement('span');
               highlight.textContent = part;
               highlight.className = 'search-highlight';
-              
+
               // Scroll the highlight into view with a slight offset for better visibility
               setTimeout(() => {
                 highlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
               }, 50);
-              
+
               span.appendChild(highlight);
             } else if (part) {
               span.appendChild(document.createTextNode(part));
@@ -414,11 +414,11 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
       // Standard partial text search for user-initiated searches
       spans.forEach(span => {
         const text = span.textContent || '';
-        
+
         // For force partial match, we'll check if the text contains any part of the search term
         let isMatch = false;
         let matchRegex: RegExp | null = null;
-        
+
         if (forcePartialMatch) {
           // Check if any part of the search text is found in the content
           isMatch = text.toLowerCase().includes(searchTermLower.substring(0, Math.ceil(searchTermLower.length * 0.7)));
@@ -433,26 +433,26 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
           isMatch = text.toLowerCase().includes(searchTermLower);
           matchRegex = new RegExp(`(${searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'i');
         }
-        
+
         if (isMatch && matchRegex) {
           matchFound = true;
-          
+
           // Replace text with highlighted version
           const parts = text.split(matchRegex);
           span.textContent = '';
-          
+
           parts.forEach(part => {
             // Check if this part matches our regex
             if (matchRegex && matchRegex.test(part)) {
               const highlight = document.createElement('span');
               highlight.textContent = part;
               highlight.className = 'search-highlight';
-              
+
               // Scroll the highlight into view
               setTimeout(() => {
                 highlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
               }, 50);
-              
+
               span.appendChild(highlight);
             } else if (part) {
               span.appendChild(document.createTextNode(part));
@@ -461,7 +461,7 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
         }
       });
     }
-    
+
     if (matchFound) {
       if (!isSpeechReading) {
         setHighlightedMatches(prev => [...prev, searchText]);
@@ -477,7 +477,7 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
         variant: "destructive"
       });
     }
-    
+
     return matchFound;
   };
 
@@ -530,7 +530,7 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
               className="pdf-page shadow-sm bg-white mx-auto"
               renderAnnotationLayer={true}
             />
-            
+
             {/* Page navigation and controls */}
             <div className="flex flex-col md:flex-row items-center gap-3 mt-4 bg-white rounded-lg shadow-sm p-4 pdf-controls">
               <div className="flex space-x-2 w-full md:w-auto justify-center">
@@ -558,7 +558,7 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
                   </svg>
                 </Button>
               </div>
-              
+
               {/* Zoom controls */}
               <div className="flex space-x-2 w-full md:w-auto justify-center">
                 <Button 
@@ -592,7 +592,7 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
                   </svg>
                 </Button>
               </div>
-              
+
               {/* Read options and speech controls */}
               <div className="flex space-x-2 w-full md:w-auto justify-center">
                 <div className="relative">
@@ -607,7 +607,7 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
                     </svg>
                     {speechRate}x
                   </Button>
-                  
+
                   {isRateMenuOpen && (
                     <div className="absolute z-10 mt-1 bg-white rounded-md shadow-lg py-1 w-20">
                       {[0.5, 0.75, 1, 1.25, 1.5, 1.75, 2].map((rate) => (
@@ -624,7 +624,7 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
                     </div>
                   )}
                 </div>
-                
+
                 <Button
                   onClick={readSelectedText}
                   disabled={isPlaying && !isTextSelected}
@@ -648,7 +648,7 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
                     </>
                   )}
                 </Button>
-                
+
                 <Button
                   onClick={handleSpeechRecognition}
                   disabled={isListening}
