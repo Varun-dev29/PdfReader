@@ -136,27 +136,30 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
     const allText = extractAllTextFromPage();
     if (!allText) return [];
 
-    // Split text into words while preserving their context
-    // Each item contains the word and the sentence/paragraph it belongs to
-    const wordsWithContext: WordWithContext[] = [];
-
-    // Split by sentences or paragraphs
+    // Split by paragraphs, preserving line breaks
     const paragraphs = allText.split(/\n+/);
 
+    const wordsWithContext: WordWithContext[] = [];
+
     paragraphs.forEach(paragraph => {
-      // Split paragraph into sentences
-      const sentences = paragraph.split(/(?<=[.!?])\s+/);
+      // Split paragraph into sentences, considering proper line breaks
+      const sentences = paragraph
+        .split(/(?<=[.!?])\s+/)
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
 
       sentences.forEach(sentence => {
-        // Split sentence into words
-        const words = sentence.split(/\s+/).filter(w => w.trim());
+        // Clean the sentence of special characters while preserving structure
+        const cleanSentence = sentence
+          .replace(/[^\w\s.,!?]|_/g, '') // Keep basic punctuation
+          .replace(/\s+/g, ' ') // Normalize spaces
+          .trim();
 
-        // Add the entire sentence instead of individual words
-        if (sentence.trim()) {
+        if (cleanSentence) {
           wordsWithContext.push({
-            word: sentence, // Original sentence with punctuation
-            cleanWord: sentence.trim(), // Sentence for highlighting
-            context: sentence // Full sentence for context
+            word: cleanSentence, // Cleaned sentence for reading
+            cleanWord: cleanSentence, // Same sentence for highlighting
+            context: sentence // Original sentence for context
           });
         }
       });
@@ -203,14 +206,14 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
                 onEnd: () => {
                   // Small delay to make reading feel more natural
                   setTimeout(() => {
-                    // Move to the next word
+                    // Move to the next sentence
                     currentIndex++;
 
                     // If we're still actively playing (not manually stopped)
                     if (!window.speechSynthesis.paused) {
                       speakNextSentence();
                     }
-                  }, 500); // Increased delay between sentences
+                  }, 500); // Half second delay between sentences
                 }
               });
             } 
