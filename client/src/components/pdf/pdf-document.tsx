@@ -172,7 +172,7 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
 
   const readSelectedText = () => {
     if (isPlaying) {
-      stopSpeaking();
+      stop();
       setIsPlaying(false);
       return;
     }
@@ -192,20 +192,28 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
     let currentIndex = 0;
 
     const readNextWord = () => {
-      if (!isPlaying || currentIndex >= words.length) {
+      if (currentIndex >= words.length) {
         setIsPlaying(false);
         return;
       }
 
-      speak(words[currentIndex], {
-        rate: speechRate,
-        pitch: 1,
-        volume: 1,
-        onEnd: () => {
+      const utterance = new SpeechSynthesisUtterance(words[currentIndex]);
+      utterance.rate = speechRate;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+
+      utterance.onend = () => {
+        if (isPlaying) {
           currentIndex++;
-          setTimeout(readNextWord, 100);
+          if (currentIndex < words.length) {
+            setTimeout(readNextWord, 50);
+          } else {
+            setIsPlaying(false);
+          }
         }
-      });
+      };
+
+      window.speechSynthesis.speak(utterance);
     };
 
     readNextWord();
