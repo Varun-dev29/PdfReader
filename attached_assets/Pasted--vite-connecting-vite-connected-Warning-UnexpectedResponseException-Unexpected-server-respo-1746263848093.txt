@@ -1,0 +1,28 @@
+[vite] connecting...
+[vite] connected.
+Warning: UnexpectedResponseException: Unexpected server response (0) while retrieving PDF "blob:https://fe81cf9e-4089-41d4-bf75-a536aa27d355-00-2r9weg9osz8re.riker.replit.dev/6afd4402-c33f-4785-9d9c-2c435e473e44".
+Warning: Cannot load system font: TimesNewRomanPS-BoldMT, installing it could help to improve PDF rendering.
+Warning: Cannot load system font: TimesNewRomanPSMT, installing it could help to improve PDF rendering.
+Warning: Cannot load system font: Arial-BoldMT, installing it could help to improve PDF rendering.
+Warning: Cannot load system font: ArialMT, installing it could help to improve PDF rendering.
+phraseLength is not defined
+phraseLength is not defined
+The above error occurred in the <PDFDocument> component:
+
+    at PDFDocument (https://fe81cf9e-4089-41d4-bf75-a536aa27d355-00-2r9weg9osz8re.riker.replit.dev/src/components/pdf/pdf-document.tsx:26:39)
+    at div
+    at PdfViewer (https://fe81cf9e-4089-41d4-bf75-a536aa27d355-00-2r9weg9osz8re.riker.replit.dev/src/pages/pdf-viewer.tsx:29:22)
+    at Route (https://fe81cf9e-4089-41d4-bf75-a536aa27d355-00-2r9weg9osz8re.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=e8d1488d:323:16)
+    at Switch (https://fe81cf9e-4089-41d4-bf75-a536aa27d355-00-2r9weg9osz8re.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=e8d1488d:379:17)
+    at main
+    at div
+    at div
+    at Provider (https://fe81cf9e-4089-41d4-bf75-a536aa27d355-00-2r9weg9osz8re.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-J7FSEGW2.js?v=e8d1488d:51:15)
+    at TooltipProvider (https://fe81cf9e-4089-41d4-bf75-a536aa27d355-00-2r9weg9osz8re.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=e8d1488d:2246:5)
+    at App (https://fe81cf9e-4089-41d4-bf75-a536aa27d355-00-2r9weg9osz8re.riker.replit.dev/src/App.tsx?v=VeBqWSqgcfUt24aueDUqp:34:30)
+    at CreditsProvider (https://fe81cf9e-4089-41d4-bf75-a536aa27d355-00-2r9weg9osz8re.riker.replit.dev/src/components/credits-provider.tsx?v=VeBqWSqgcfUt24aueDUqp:32:35)
+    at AuthProvider (https://fe81cf9e-4089-41d4-bf75-a536aa27d355-00-2r9weg9osz8re.riker.replit.dev/src/components/auth-provider.tsx?v=VeBqWSqgcfUt24aueDUqp:32:32)
+    at QueryClientProvider (https://fe81cf9e-4089-41d4-bf75-a536aa27d355-00-2r9weg9osz8re.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=e8d1488d:2805:3)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
