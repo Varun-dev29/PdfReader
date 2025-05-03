@@ -1,5 +1,7 @@
 /* Import PDF styles */
 @import './styles/pdf-styles.css';
+@import 'react-pdf/dist/Page/TextLayer.css';
+@import 'react-pdf/dist/Page/AnnotationLayer.css';
 
 @tailwind base;
 @tailwind components;
