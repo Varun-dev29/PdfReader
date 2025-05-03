@@ -622,6 +622,14 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
               renderAnnotationLayer={true}
             />
 
+            {/* Extracted text display */}
+            <div className="mt-4 bg-white rounded-lg shadow-sm p-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">Extracted Text</h3>
+              <div className="text-sm text-gray-600 whitespace-pre-wrap">
+                {extractAllTextFromPage()}
+              </div>
+            </div>
+
             {/* Page navigation and controls */}
             <div className="flex flex-col md:flex-row items-center gap-3 mt-4 bg-white rounded-lg shadow-sm p-4 pdf-controls">
               <div className="flex space-x-2 w-full md:w-auto justify-center">
