@@ -188,35 +188,26 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
     }
 
     setIsPlaying(true);
-    const words = textToRead.split(/\s+/).filter(word => word.length > 0);
-    let currentIndex = 0;
+    const utterance = new SpeechSynthesisUtterance(textToRead);
+    utterance.rate = speechRate;
+    utterance.pitch = 1;
+    utterance.volume = 1;
 
-    const readNextWord = () => {
-      if (currentIndex >= words.length) {
-        setIsPlaying(false);
-        return;
-      }
-
-      const utterance = new SpeechSynthesisUtterance(words[currentIndex]);
-      utterance.rate = speechRate;
-      utterance.pitch = 1;
-      utterance.volume = 1;
-
-      utterance.onend = () => {
-        if (isPlaying) {
-          currentIndex++;
-          if (currentIndex < words.length) {
-            setTimeout(readNextWord, 50);
-          } else {
-            setIsPlaying(false);
-          }
-        }
-      };
-
-      window.speechSynthesis.speak(utterance);
+    utterance.onend = () => {
+      setIsPlaying(false);
     };
 
-    readNextWord();
+    utterance.onerror = () => {
+      setIsPlaying(false);
+      toast({
+        title: "Error",
+        description: "An error occurred while reading the text",
+        variant: "destructive",
+      });
+    };
+
+    window.speechSynthesis.cancel(); // Cancel any ongoing speech
+    window.speechSynthesis.speak(utterance);
   };
 
   const readCurrentPage = () => {
