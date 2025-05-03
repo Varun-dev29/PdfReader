@@ -133,6 +133,29 @@
   100% { background-color: #ffeb3b; box-shadow: 0 0 4px rgba(255, 235, 59, 0.7); }
 }
 
+/* PDF container styles */
+.pdf-container {
+  touch-action: none; /* Prevents default touch behaviors */
+}
+
+.pdf-container .react-pdf__Page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: white;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  margin: 0 auto;
+}
+
+/* Current word highlight */
+.current-word {
+  background-color: #4CAF50;
+  color: white !important;
+  padding: 0 2px;
+  border-radius: 3px;
+  transition: background-color 0.3s ease;
+}
+
 /* Mobile optimizations */
 @media (max-width: 640px) {
   .pdf-controls {

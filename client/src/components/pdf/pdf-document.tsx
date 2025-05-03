@@ -31,6 +31,7 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
   const [isRateMenuOpen, setIsRateMenuOpen] = useState(false);
   const [speechRate, setSpeechRate] = useState<number>(1);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false); // Added state for fullscreen
   const containerRef = useRef<HTMLDivElement>(null);
 
   const { startTracking, stopTracking } = useUsageTracking();
@@ -542,6 +543,16 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
   const zoomOut = () => setScale(scale - 0.2 > 0.5 ? scale - 0.2 : 0.5);
   const resetZoom = () => setScale(1);
 
+  const toggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen);
+    if (isFullscreen) {
+      document.exitFullscreen();
+    } else {
+      const element = document.documentElement;
+      element.requestFullscreen();
+    }
+  };
+
   const handleRateChange = (rate: number) => {
     setSpeechRate(rate);
     setIsRateMenuOpen(false);
@@ -630,6 +641,11 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
                 </Button>
                 <Button onClick={resetZoom} variant="outline" size="sm" title="Reset zoom">
                   <span className="text-xs font-medium">{Math.round(scale * 100)}%</span>
+                </Button>
+                <Button onClick={toggleFullscreen} variant="outline" size="sm" title="Toggle fullscreen">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0 0l-5-5m5 17v-4m0 4h-4m4-4l-5 5M4 16v4m0 0h4m-4 0l5-5" />
+                  </svg>
                 </Button>
                 <Button onClick={zoomIn} variant="outline" size="sm" title="Zoom in">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
