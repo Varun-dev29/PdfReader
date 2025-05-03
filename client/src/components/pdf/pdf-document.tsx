@@ -104,13 +104,27 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
     let extractedText = "";
     let lastTop = -1;
 
+    const isValidWord = (word: string) => {
+      // Filter out words that are too short or contain repeated characters
+      if (word.length < 2) return false;
+      if (/(.)\1{2,}/.test(word)) return false; // Filter words with 3+ repeated chars
+      if (!/[aeiou]/i.test(word) && word.length > 3) return false; // Long words must have vowels
+      if (/[0-9]{5,}/.test(word)) return false; // Filter long number sequences
+      return true;
+    };
+
     textSpans.forEach((span) => {
-      const text = (span.textContent || "")
+      const rawText = (span.textContent || "")
         .toLowerCase()
-        .replace(/[^\w\s]/g, '')
+        .replace(/[^\w\s]/g, ' ')
         .trim();
 
-      if (text) {
+      // Filter words individually
+      const validWords = rawText.split(/\s+/)
+        .filter(word => word && isValidWord(word))
+        .join(' ');
+
+      if (validWords) {
         const currentTop = parseInt(span.style.top);
 
         if (lastTop !== -1 && Math.abs(currentTop - lastTop) > 15) {
@@ -123,7 +137,7 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
           extractedText += " ";
         }
 
-        extractedText += text;
+        extractedText += validWords;
         lastTop = currentTop;
       }
     });
