@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/lib/hooks';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
+import { useToast } from '@/hooks/use-toast';
 
 interface RecentFile {
   id: number;
@@ -18,12 +19,13 @@ export default function RecentFilesPage() {
   const { isAuthenticated, user } = useAuth();
   const [files, setFiles] = useState<RecentFile[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast(); // Added toast initialization
 
   useEffect(() => {
     // Load recent files from localStorage for guest users or from API for authenticated users
     const loadRecentFiles = async () => {
       setLoading(true);
-      
+
       try {
         if (isAuthenticated && user) {
           // For authenticated users, fetch from API
@@ -45,10 +47,10 @@ export default function RecentFilesPage() {
         setLoading(false);
       }
     };
-    
+
     loadRecentFiles();
   }, [isAuthenticated, user]);
-  
+
   const handleOpenFile = (fileId: number, fileUrl: string) => {
     if (!fileUrl) {
       toast({
@@ -70,7 +72,7 @@ export default function RecentFilesPage() {
       localStorage.setItem('pdfReader_recentFiles', JSON.stringify(updatedFiles));
     }
   };
-  
+
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
@@ -98,7 +100,7 @@ export default function RecentFilesPage() {
           Upload New PDF
         </Button>
       </div>
-      
+
       {loading ? (
         <div className="flex justify-center items-center h-64">
           <Spinner className="w-10 h-10" />
@@ -106,7 +108,7 @@ export default function RecentFilesPage() {
       ) : files.length === 0 ? (
         <div className="bg-gray-50 rounded-lg p-8 text-center">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253" />
           </svg>
           <h3 className="text-lg font-medium text-gray-900">No recent files</h3>
           <p className="mt-2 text-sm text-gray-500">
