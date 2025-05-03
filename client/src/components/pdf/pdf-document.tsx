@@ -113,6 +113,11 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
       return true;
     };
 
+    // Function to remove consecutive duplicate words
+    const removeRepeatedWords = (text: string) => {
+      return text.split(/\s+/).filter((word, index, arr) => word !== arr[index - 1]).join(' ');
+    };
+
     textSpans.forEach((span) => {
       const rawText = (span.textContent || "")
         .toLowerCase()
@@ -137,10 +142,13 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
           extractedText += " ";
         }
 
-        extractedText += validWords;
+        extractedText += validWords + " ";
         lastTop = currentTop;
       }
     });
+    
+    // Clean up extra spaces and remove repeated words
+    extractedText = removeRepeatedWords(extractedText.replace(/\s+/g, ' ').trim());
 
     return extractedText.trim();
   };
