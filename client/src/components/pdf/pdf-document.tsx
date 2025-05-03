@@ -177,33 +177,23 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
       return;
     }
 
-    if (selectedText) {
-      setIsPlaying(true);
-      speak(selectedText, { 
-        rate: speechRate,
-        onEnd: () => {
-          setIsPlaying(false);
-        }
+    const textToRead = selectedText || extractAllTextFromPage();
+    if (!textToRead) {
+      toast({
+        title: "No text found",
+        description: "Could not find any text to read on this page.",
+        variant: "destructive",
       });
-    } else {
-      const pageText = extractAllTextFromPage();
-      if (!pageText) {
-        toast({
-          title: "No text found",
-          description: "Could not find any text to read on this page.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setIsPlaying(true);
-      speak(pageText, {
-        rate: speechRate,
-        onEnd: () => {
-          setIsPlaying(false);
-        }
-      });
+      return;
     }
+
+    setIsPlaying(true);
+    speak(textToRead, {
+      rate: speechRate,
+      pitch: 1,
+      volume: 1,
+      onEnd: () => setIsPlaying(false)
+    });
   };
 
   const readCurrentPage = () => {
