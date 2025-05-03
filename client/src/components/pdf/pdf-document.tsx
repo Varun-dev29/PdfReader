@@ -215,16 +215,32 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
         }
 
         try {
-          const utterance = new SpeechSynthesisUtterance(words[currentIndex]);
+          // Ensure speech synthesis is available
+          if (!window.speechSynthesis) {
+            throw new Error("Speech synthesis not available");
+          }
+
+          // Cancel any ongoing speech
+          window.speechSynthesis.cancel();
+
+          // Create shorter chunks of text to avoid synthesis errors
+          const chunk = words.slice(currentIndex, currentIndex + 5).join(" ");
+          const utterance = new SpeechSynthesisUtterance(chunk);
           utterance.rate = speechRate;
           utterance.pitch = 1;
           utterance.volume = 1;
 
+          // Wait for voices to load if needed
+          const voices = window.speechSynthesis.getVoices();
+          if (voices.length > 0) {
+            utterance.voice = voices[0]; // Use first available voice
+          }
+
           utterance.onend = () => {
             if (isSpeaking) {
-              currentIndex++;
+              currentIndex += 5;
               if (currentIndex < words.length) {
-                setTimeout(readNextWord, 100);
+                setTimeout(readNextWord, 250); // Increased delay between chunks
               } else {
                 setIsPlaying(false);
               }
@@ -233,13 +249,19 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
 
           utterance.onerror = (event) => {
             console.error('Speech synthesis error:', event);
-            isSpeaking = false;
-            setIsPlaying(false);
-            toast({
-              title: "Error",
-              description: "Failed to read text. Please try again.",
-              variant: "destructive",
-            });
+            // Try to recover by moving to next chunk
+            currentIndex += 5;
+            if (currentIndex < words.length) {
+              setTimeout(readNextWord, 500); // Longer delay after error
+            } else {
+              isSpeaking = false;
+              setIsPlaying(false);
+              toast({
+                title: "Warning",
+                description: "Some text could not be read. Please try again with a smaller selection.",
+                variant: "destructive",
+              });
+            }
           };
 
           window.speechSynthesis.speak(utterance);
@@ -249,7 +271,7 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
           setIsPlaying(false);
           toast({
             title: "Error",
-            description: "Failed to process text. Please try again.",
+            description: error instanceof Error ? error.message : "Failed to process text. Please try again.",
             variant: "destructive",
           });
         }
