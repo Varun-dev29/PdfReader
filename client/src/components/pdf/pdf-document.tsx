@@ -216,13 +216,24 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
               // First highlight the sentence, then speak it
               const highlightSuccess = highlightTextInPdf(cleanWord, true);
 
+              // Format text for better reading - remove excessive symbols and normalize spacing
+              const formattedForSpeech = formattedText
+                .replace(/[^\w\s.,!?-]/g, ' ') // Keep only essential punctuation
+                .replace(/\s+/g, ' ')
+                .trim();
+
+              // Add slight pauses after punctuation marks for natural reading
+              const textWithPauses = formattedForSpeech
+                .replace(/([.!?])\s+/g, '$1... ') // Add pause after sentence endings
+                .replace(/,\s+/g, ', '); // Add slight pause after commas
+
               // Configure speech settings for natural reading
-              speak(formattedText, {
+              speak(textWithPauses, {
                 rate: speechRate,
                 pitch: 1,
                 volume: 1,
                 onEnd: () => {
-                  // Small delay between sentences for natural pacing
+                  // Longer delay between sentences for better comprehension
                   setTimeout(() => {
                     // Move to the next sentence
                     currentIndex++;
