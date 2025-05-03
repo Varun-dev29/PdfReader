@@ -35,7 +35,7 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
 
   const { startTracking, stopTracking } = useUsageTracking();
   const { speak, stop: stopSpeaking } = useTTS();
-  const { startListening, isListening } = useSpeechRecognition();
+  const { startListening, stopListening, isListening } = useSpeechRecognition();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -361,70 +361,73 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
   };
 
   const handleSpeechRecognition = () => {
-    if (isListening) return;
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening((text) => {
+        setSearchText(text);
+        if (text.trim()) {
+          // Keep punctuation for better sentence matching
+          const cleanText = text.trim().replace(/[^a-zA-Z0-9\s.,!?]/g, "");
 
-    startListening((text) => {
-      setSearchText(text);
-      if (text.trim()) {
-        const cleanText = text.trim().replace(/[^a-zA-Z0-9\s]/g, "");
+          toast({
+            title: "Text recognized",
+            description: `Searching for: "${cleanText}"`,
+          });
 
-        toast({
-          title: "Text recognized",
-          description: `Searching for: "${cleanText}"`,
-        });
+          let found = highlightTextInPdf(cleanText, false);
 
-        let found = highlightTextInPdf(cleanText, false);
+          if (!found && cleanText.split(/\s+/).length > 1) {
+            const words = cleanText.split(/\s+/);
 
-        if (!found && cleanText.split(/\s+/).length > 1) {
-          const words = cleanText.split(/\s+/);
-
-          for (let windowSize = words.length - 1; windowSize > 0; windowSize--) {
-            for (let startIdx = 0; startIdx <= words.length - windowSize; startIdx++) {
-              const subPhrase = words.slice(startIdx, startIdx + windowSize).join(" ");
-              if (subPhrase.length > 3) {
-                const phraseFound = highlightTextInPdf(subPhrase, false);
-                if (phraseFound) {
-                  found = true;
-                  break;
+            for (let windowSize = words.length - 1; windowSize > 0; windowSize--) {
+              for (let startIdx = 0; startIdx <= words.length - windowSize; startIdx++) {
+                const subPhrase = words.slice(startIdx, startIdx + windowSize).join(" ");
+                if (subPhrase.length > 3) {
+                  const phraseFound = highlightTextInPdf(subPhrase, false);
+                  if (phraseFound) {
+                    found = true;
+                    break;
+                  }
                 }
               }
-            }
-            if (found) break;
-          }
-        }
-
-        if (!found) {
-          const words = cleanText.split(/\s+/);
-
-          for (const word of words) {
-            if (word.length > 2) {
-              const wordFound = highlightTextInPdf(word, false);
-              if (wordFound) {
-                found = true;
-                break;
-              }
+              if (found) break;
             }
           }
 
           if (!found) {
+            const words = cleanText.split(/\s+/);
+
             for (const word of words) {
-              if (word.length > 3) {
-                const partialMatch = highlightTextInPdf(word, false, true);
-                if (partialMatch) {
+              if (word.length > 2) {
+                const wordFound = highlightTextInPdf(word, false);
+                if (wordFound) {
                   found = true;
                   break;
                 }
               }
             }
-          }
 
-          if (!found && cleanText.length > 3) {
-            const partialText = cleanText.substring(0, Math.ceil(cleanText.length * 0.7));
-            highlightTextInPdf(partialText, false, true);
+            if (!found) {
+              for (const word of words) {
+                if (word.length > 3) {
+                  const partialMatch = highlightTextInPdf(word, false, true);
+                  if (partialMatch) {
+                    found = true;
+                    break;
+                  }
+                }
+              }
+            }
+
+            if (!found && cleanText.length > 3) {
+              const partialText = cleanText.substring(0, Math.ceil(cleanText.length * 0.7));
+              highlightTextInPdf(partialText, false, true);
+            }
           }
         }
-      }
-    });
+      });
+    }
   };
 
   const highlightTextInPdf = (

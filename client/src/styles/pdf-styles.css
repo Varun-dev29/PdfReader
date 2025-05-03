@@ -141,6 +141,20 @@
     padding: 8px;
   }
   
+
+/* Mobile PDF sizing */
+@media (max-width: 640px) {
+  .react-pdf__Page {
+    width: 100vw !important;
+    height: auto !important;
+  }
+  
+  .react-pdf__Page__canvas {
+    width: 100% !important;
+    height: auto !important;
+  }
+}
+
   .pdf-controls > div {
     width: 100%;
     justify-content: space-between;
