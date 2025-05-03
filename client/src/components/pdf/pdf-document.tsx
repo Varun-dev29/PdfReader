@@ -188,12 +188,27 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
     }
 
     setIsPlaying(true);
-    speak(textToRead, {
-      rate: speechRate,
-      pitch: 1,
-      volume: 1,
-      onEnd: () => setIsPlaying(false)
-    });
+    const words = textToRead.split(/\s+/).filter(word => word.length > 0);
+    let currentIndex = 0;
+
+    const readNextWord = () => {
+      if (!isPlaying || currentIndex >= words.length) {
+        setIsPlaying(false);
+        return;
+      }
+
+      speak(words[currentIndex], {
+        rate: speechRate,
+        pitch: 1,
+        volume: 1,
+        onEnd: () => {
+          currentIndex++;
+          setTimeout(readNextWord, 100);
+        }
+      });
+    };
+
+    readNextWord();
   };
 
   const readCurrentPage = () => {
