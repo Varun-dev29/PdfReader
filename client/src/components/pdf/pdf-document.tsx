@@ -151,17 +151,14 @@ export default function PDFDocument({ file, onLoadSuccess }: PDFDocumentProps) {
         // Split sentence into words
         const words = sentence.split(/\s+/).filter(w => w.trim());
         
-        words.forEach(word => {
-          // Clean the word of punctuation for highlighting, but keep original for reading
-          const cleanWord = word.replace(/[^\w\s]|_/g, '').trim();
-          if (cleanWord) {
-            wordsWithContext.push({
-              word: word, // Original word with punctuation
-              cleanWord: cleanWord, // Word without punctuation for highlighting
-              context: sentence // Full sentence for context
-            });
-          }
-        });
+        // Add the entire sentence instead of individual words
+        if (sentence.trim()) {
+          wordsWithContext.push({
+            word: sentence, // Original sentence with punctuation
+            cleanWord: sentence.trim(), // Sentence for highlighting
+            context: sentence // Full sentence for context
+          });
+        }
       });
     });
     
